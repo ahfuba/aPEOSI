@@ -2,7 +2,7 @@
 
 ## ahfuba's Python Emulated Operating System Interface
 
-A Python based DOS/OS Simulator, made for fun and understanding WHY Python is really unfit for programming such applications that require process speed, which allows users to execute commands or run applications without the limitation of the OS.
+A Python based DOS/OS Simulator, made for fun and understanding WHY Python is really unfit for programming operating systems/kernels that require less consumption of system resources, which allows users to execute commands or run applications without the limitation of resources.
 
 It also is a project to understand the fundamentals of the front-end of an OS.
 
