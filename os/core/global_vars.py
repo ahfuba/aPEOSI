@@ -14,8 +14,7 @@ input_manager = None
 kernel = None
 io = None
 
-# do NOT change this value directly, use the Ticker class in scheduler.py to manage ticks
-current_tick = 0.0
+
 
 # determines the simulation ticker precision, lower is more precise but more CPU intensive. use at your own risk.
 # the float entered will determine the rate of ticks. ie, 0.2 means each tick will equal to 0.2 seconds.
@@ -31,6 +30,11 @@ tick_precision = 0.1
 # START OF TIME IS ALWAYS 0 YOU FUCKING IDIOT. WHY WOULD YOU EVEN THINK OF CHANGING IT.
 time_raw = time.time()
 current_time = int(time_raw) + int((time_raw % 1) * 10) / 10
-print(current_time)
+print(f"Current time in Seconds since EPOCH: {current_time}")
+
+# do NOT change this value directly, use the Ticker class in scheduler.py to manage ticks
+current_tick = current_time / tick_precision
+
+current_time_n_date = time.ctime(time_raw)
 # import time;le_bing_bang = time.time()  # the start of time, in seconds since epoch. do NOT change this value. [OBSOLETE]
 

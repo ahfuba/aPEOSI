@@ -1,14 +1,21 @@
-from core import globals
 from core.io_manager import IOManager
-from kernel import scheduler
-globals.io = IOManager()
+from kernel.scheduler import Ticker
+from core import global_vars as g
+import threading
 
-globals.scheduler = scheduler.Ticker()
+io = IOManager()
+ticker = Ticker(io)
+ticker.start()  # ticker kendi thread’inde çalışıyor
 
-while not globals.terminate:
-    cmd = globals.io.input()
-    if globals.terminate or cmd is None:
-        break
-    globals.io.output(f"Executing: {cmd}")
+def terminal_loop():
+    while not g.terminate:
+        user_input = io.input()  # input() main thread’de bloklayacak
+        if g.terminate:
+            break
 
-globals.io.output("System has been shut down successfully.")
+# terminal loop’u kendi thread’inde çalıştırabilirsin de
+terminal_thread = threading.Thread(target=terminal_loop)
+terminal_thread.start()
+
+terminal_thread.join()
+ticker.stop()

@@ -1,6 +1,6 @@
 # core/io_manager.py
 import sys
-from core import globals
+from core import global_vars
 from kernel.scheduler import Ticker
 
 class IOManager:
@@ -17,11 +17,11 @@ class IOManager:
        # terminates the system if the terminate word is entered in any input given
         if user_input.lower() == self.terminate_word:
             self.output("System terminating...")
-            self.output("System terminated at tick: " + str(globals.current_tick))
-            globals.terminate = True
+            self.output("System terminated at tick: " + str(global_vars.current_tick))
+            global_vars.terminate = True
             return None
         if user_input.lower() == self.tick_check_word:
-            self.tick_check("Tick check requested by user. Current tick: " + str(globals.current_tick))
+            self.tick_check("Tick check requested by user. Current tick: " + str(global_vars.current_tick))
             return None
 
         
