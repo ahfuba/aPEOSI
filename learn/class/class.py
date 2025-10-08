@@ -46,4 +46,8 @@ class User:
             USER_LOGIN.login_pwd = input("Password:")
             return USER_LOGIN.login(USER_LOGIN)
 
+    def terminate(USER_TERM):
+        print("Terminating session.")
+        
+        return
 User.__init__(User, "", "")

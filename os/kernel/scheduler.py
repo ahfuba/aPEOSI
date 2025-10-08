@@ -1,12 +1,19 @@
 # Used to manage (simulating) task scheduling and CPU time allocation
-
+# not efficient, subject to change
 import time
+from core import globals
 
 tick = 0
 
-tick_length = 1.0
 
-while True:
-    tick += 1
-    time.sleep(tick_length)  # Simulate a clock tick every second
-    print(f"Ticked. Previous Tick: {tick}")
+
+
+class Ticker:
+    def __init__(self):
+        self.tick = 0
+
+    def start(self):
+        while True:
+            globals.current_tick = self.tick + globals.current_time
+            self.tick = self.tick + globals.tick_precision
+            time.sleep(globals.tick_precision)
