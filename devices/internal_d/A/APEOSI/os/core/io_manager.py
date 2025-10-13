@@ -2,6 +2,8 @@
 import sys
 from core import global_vars
 from kernel.scheduler import Ticker
+from kernel.dispatcher import dispatcher
+
 
 class IOManager:
     def __init__(self):
@@ -20,6 +22,7 @@ class IOManager:
             self.output("System terminated at tick: " + str(global_vars.current_tick))
             global_vars.terminate = True
             return None
+            
         if user_input.lower() == self.tick_check_word:
             self.tick_check("Tick check requested by user. Current tick: " + str(global_vars.current_tick))
             return None
@@ -42,5 +45,11 @@ class IOManager:
     def tick_check(self, message):
         print(f"[TICK CHECK] {message}")
         self.log(f"TICK CHECK: {message}")
+
+    def handle_input(user_input):
+        output = dispatcher.execute(user_input)
+        if output:
+            print(output)
+
 
         
