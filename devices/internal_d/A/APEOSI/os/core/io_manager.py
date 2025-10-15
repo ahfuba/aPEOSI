@@ -1,5 +1,7 @@
 # core/io_manager.py
 import sys
+import csv
+import importlib
 from core import global_vars
 from kernel.scheduler import Ticker
 from kernel.dispatcher import dispatcher
@@ -12,23 +14,11 @@ class IOManager:
         self.tick_check_word = "tick"
         self.logs = []
 
-    def input(self, prompt=None):
+    def input(self, prompt=None, csv_path="command_dict.csv"):
         prompt = prompt or self.prompt
         user_input = input(prompt)
 
-       # terminates the system if the terminate word is entered in any input given
-        if user_input.lower() == self.terminate_word:
-            self.output("System terminating...")
-            self.output("System terminated at tick: " + str(global_vars.current_tick))
-            global_vars.terminate = True
-            return None
-            
-        if user_input.lower() == self.tick_check_word:
-            self.tick_check("Tick check requested by user. Current tick: " + str(global_vars.current_tick))
-            return None
 
-        
-        self.log(f"INPUT: {user_input}")
         return user_input
 
     def output(self, message):
