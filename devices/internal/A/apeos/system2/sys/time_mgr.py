@@ -34,3 +34,7 @@ def TIME_DATE_DMY():
 def TIME_SECONDS_EPOCH():
     """Return the current time as seconds since the epoch."""
     return int(SYS_TIME)
+
+def DELAY(seconds):
+    """Pause execution for a given number of seconds."""
+    time.sleep(seconds)

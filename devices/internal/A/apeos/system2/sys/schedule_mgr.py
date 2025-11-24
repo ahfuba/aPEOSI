@@ -1,4 +1,4 @@
-from time import *
+from time_mgr import *
 
 SYS_TIME = HH_MM()
 
@@ -10,7 +10,8 @@ class ScheduleManager:
 
     def schedule_task(self, task, execution_time):
         """Schedule a new task to be executed at a specific time."""
-        self.scheduled_tasks.append((task, execution_time))
+        execution_time = str(f"[{TIME_FULL_YMD()}]")
+        self.scheduled_tasks.append((execution_time, task))
 
     def get_scheduled_tasks(self):
         """Retrieve the list of scheduled tasks."""
