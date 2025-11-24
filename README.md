@@ -20,19 +20,19 @@ There is a base kernel that works, not same, but similar to a kernel. The model 
 
 Well, I actually got this "kernel inspiration" idea by asking. I certainly don't know what I am doing or why I am doing this. So... um... yea.
 
-<!--### How does it work?
+### How does it work?
 
 The way it works is, first and foremost, carcinogenic. Python is a high-level language, making it REALLY heavy and resource-intensive, which makes this simulation WAY slower than a simulator written in C, C++, or any other low- to mid-level language.
 
-When you first run setup.bat, it runs setup.py (duh). This adds an `A` disk (OS disk) and a `BOOT` disk. That’s all it adds. You expected more? Great. Lick your palm.
+When installed correctly using the `setup.bat`, you will be able to run the OS simulation in a window by running `py/python/pythonX apeosi.py`, running the OS.
 
-Then, it basically clones the GitHub repo into this A disk, in a folder called `"apeos"`, and, similar to Windows creating an MBR partition on your disk, it also creates another partition called `"C:"`, and a `"Windows"` folder under the disk `"C:"`, allowing the notation `"C:\Windows"`. With the same logic, a file location in Windows would be: `<folder you put the setup in>\disks\A\newfolder\blabla.bla`, meanwhile in aPEOSI, it would be: `A:/newfolder/blabla.bla`.
+##### Tasks, main schedule and OS interface. (As of alpha-1)
 
-When installed correctly using the `setup.bat`, you will be able to run the OS simulation in a windows by running `py/python/pythonX apeosi.py`, running the OS.
+The whole aPEOS runs on a task called MAIN. The task manager first schedules the MAIN task and prepares the related task run-lanes, when the app is booted up.  A run-lane means any task related to the current task and their paths and variables are stored beforehand any possible launch choice of the user.
 
-In the background; -->
+After the MAIN task launches, user basically chooses system tasks or other application tasks that may be launched over the MAIN task itself. MAIN task works in turns with the task manager, which basically, MAIN task works as an interface for the user, and task manager is the backend for it.
 
-**IMPORTANT:** Any harm done by files or applications run by my app is out of my responsibility. Use the app at your own risk. Execute programs or open files at your own risk.
+**IMPORTANT:** Any harm done by files or applications run by my app is out of my responsibility. Use the app at your own risk. Execute programs or open files at your own risk. The applications I put within the OS interface are ~~hopefully~~ safe, so you can run them pretty much without too many risks. However, if you are running any kind of a modified version of aPEOSI, I strictly reject any form of responsibility, even though the problems are caused from the unedited parts of the code.
 
 ###### This app is licenced under MIT License.
 ###### Make sure you give attribution when using/modifying it. You are free to do so.
