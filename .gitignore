@@ -1,2 +1,8 @@
 *.zip
 aPEOSI.zip
+*.pyc
+__pycache__/
+*.log
+*.tmp
+*.bak
+
