@@ -117,6 +117,14 @@ Goal: programs become machine code in RAM, run by a virtual CPU.
 
 ## 💡 Later
 
+### Languages
+- [ ] **aPE-C**: a compiler for a small subset of C that generates machine code for the aPEOSI 2.0 virtual CPU,
+  the way HolyC is TempleOS's own C. Comes after the virtual CPU exists, and after learning C well enough to
+  design it. Planned order:
+  1. Learn C basics
+  2. aPEOSI 2.0 virtual CPU + assembler
+  3. aPE-C: start with integers, `if`/`while`, functions; add pointers and arrays later
+
 ### OS
 - [ ] Our own **file system** on a disk image file (superblock, FAT or inodes, blocks) instead of host folders
 - [ ] Shell: pipes `|`, redirection `>` `<`, batch scripts, environment variables, quoted arguments
