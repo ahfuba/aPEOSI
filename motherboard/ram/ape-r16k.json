@@ -1,0 +1,7 @@
+{
+  "type": "ram",
+  "name": "aPE-R16K",
+  "page_size": 256,
+  "num_pages": 64,
+  "description": "16 KiB SODIMM: 64 frames of 256 bytes. Small enough to see every bit."
+}

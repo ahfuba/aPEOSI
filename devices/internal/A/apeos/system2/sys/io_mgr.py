@@ -1,4 +1,5 @@
 import csv
+import os
 from . import sys_cmd_exec
 
 class IOManager:
@@ -12,8 +13,9 @@ class IOManager:
 
     def _load_commands(self):
         """Loads command definitions from the CSV file."""
+        # The command table sits next to this file, wherever aPEOSI is installed.
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sys_cmd.csv')
         try:
-            path = 'c:/Users/ahfuba/Desktop/aPEOSI/devices/internal/A/apeos/system2/sys/sys_cmd.csv'
             with open(path, mode='r', newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
@@ -23,16 +25,15 @@ class IOManager:
 
                     command_name = row.get('command', '').strip()
                     alias_name = row.get('alias', '').strip()
-                    self.commands[command_name] = {k.strip(): v.strip() for k, v in row.items()}
+                    self.commands[command_name] = {k.strip(): (v or '').strip()
+                                                   for k, v in row.items() if k}
                     if alias_name and command_name:
                         self.aliases[alias_name] = command_name
             print("Command Manager: Commands loaded successfully.")
         except FileNotFoundError:
-            print(f"FATAL: Command CSV not found at {path}")
-            self.kernel.running = False
+            raise RuntimeError(f"Command CSV not found at {path}")
         except Exception as e:
-            print(f"FATAL: Error loading commands: {e}")
-            self.kernel.running = False
+            raise RuntimeError(f"Error loading commands: {e}")
 
     def handle_input(self, command_line: str):
         """Parses and executes a command."""

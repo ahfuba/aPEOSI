@@ -1,0 +1,6 @@
+{
+  "type": "cpu",
+  "name": "aPE-C1",
+  "clock_hz": 200,
+  "description": "Standard CPU. Up to 200 scheduler rounds per second."
+}

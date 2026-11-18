@@ -1,0 +1,7 @@
+{
+  "type": "ram",
+  "name": "aPE-R64K",
+  "page_size": 256,
+  "num_pages": 256,
+  "description": "64 KiB SODIMM: 256 frames of 256 bytes."
+}

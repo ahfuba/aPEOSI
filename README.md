@@ -24,13 +24,34 @@ Well, I actually got this "kernel inspiration" idea by asking. I certainly don't
 
 The way it works is, first and foremost, carcinogenic. Python is a high-level language, making it REALLY heavy and resource-intensive, which makes this simulation WAY slower than a simulator written in C, C++, or any other low- to mid-level language.
 
-When installed correctly using the `setup.bat`, you will be able to run the OS simulation in a window by running `py/python/pythonX apeosi.py`, running the OS.
+You need Python 3.8 or newer; nothing else to install. From the project folder, run `python main.py` (or `py main.py` on Windows) to boot the OS. Add `--fast` to skip the boot delays and the memory test.
 
 ##### Tasks, main schedule and OS interface. (As of alpha-1)
 
 The whole aPEOS runs on a task called MAIN. The task manager first schedules the MAIN task and prepares the related task run-lanes, when the app is booted up.  A run-lane means any task related to the current task and their paths and variables are stored beforehand any possible launch choice of the user.
 
 After the MAIN task launches, user basically chooses system tasks or other application tasks that may be launched over the MAIN task itself. MAIN task works in turns with the task manager, which basically, MAIN task works as an interface for the user, and task manager is the backend for it.
+
+##### aPEOSI 1.2: aPE-RAM, the motherboard and the Watchdog
+
+aPEOSI now runs on simulated hardware you can see.
+
+* **`/motherboard`** holds the hardware: a `board.json` that picks a CPU and a RAM module, and the parts themselves as small JSON files. Swap them or make your own. See [`motherboard/README.md`](motherboard/README.md).
+* **aPE-RAM**: the RAM is a real file, `motherboard/ram0.aperam`. The OS keeps its process table, page tables, frame table, keyboard buffer and every app's memory **inside that file**. Every hardware file starts with the same aPE device header (`.aperam` now; `.apemb` and `.apebus` are reserved). See [`docs/aPE-hardware.md`](docs/aPE-hardware.md).
+* **aPE-RAM Watchdog**: a separate program that maps the same file and shows every frame and bit live, so you can watch aPEOSI switch bits. It needs Python's built-in `tkinter`.
+
+```
+python main.py                 # window 1: boot aPEOSI
+python aperam_watchdog.py      # window 2: watch its RAM
+```
+
+Then try `counter &`, `banana note.txt`, `ps`, `mem`, `peek 1 0` and `kill 1`.
+
+**aPE-BASIC**: a BASIC like the 1980s home computers had, so you can write your own programs. Type `basic` for the BASIC prompt, or run a file with `basic basic/guess.bas`. Its program and variables live in aPE-RAM, and `PEEK`/`POKE` reach its memory directly. See [`docs/aPE-BASIC.md`](docs/aPE-BASIC.md).
+
+Also new in 1.2: background processes keep running while you type, `Sleep`/`ReadLine` system calls, virtual memory with demand paging, Ctrl+C kills the foreground app, and the new commands `ps`, `kill`, `fg`, `mem`, `peek`, `counter` and `basic`. A guided tour of how it all works is in [`docs/how-aPEOSI-1.2-works.md`](docs/how-aPEOSI-1.2-works.md).
+
+Where the project is going next: see [`ROADMAP.md`](ROADMAP.md).
 
 **IMPORTANT:** Any harm done by files or applications run by my app is out of my responsibility. Use the app at your own risk. Execute programs or open files at your own risk. The applications I put within the OS interface are ~~hopefully~~ safe, so you can run them pretty much without too many risks. However, if you are running any kind of a modified version of aPEOSI, I strictly reject any form of responsibility, even though the problems are caused from the unedited parts of the code.
 

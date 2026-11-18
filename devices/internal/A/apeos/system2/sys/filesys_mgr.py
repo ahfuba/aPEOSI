@@ -86,14 +86,14 @@ class FileSystemManager:
         return {}
 
     def get_full_current_path(self):
-        """Returns the full virtual path, e.g., 'A:\system'."""
+        """Returns the full virtual path, e.g., 'A:/system'."""
         if not self.current_drive:
             return "[no drive]"
         return self.current_drive + self.current_path
 
     def _get_host_path(self, virtual_path):
         """
-        Converts a virtual path (e.g., 'A:\system') to a real host OS path.
+        Converts a virtual path (e.g., 'A:/system') to a real host OS path.
         Returns None if the path is invalid.
         """
         # An absolute path starts with a drive letter, e.g., "A:/..." or "A:"

@@ -18,8 +18,86 @@ def _cmd_help(args, kernel, io_manager):
             print(f"  {cmd_name:<12} {' ':<19} - {desc}")
 
 def _cmd_list_tasks(args, kernel, io_manager):
-    """Lists all currently scheduled tasks."""
-    print(f"Scheduled tasks: {kernel.scheduler.get_scheduled_tasks()}")
+    """Lists processes by reading the process table straight out of aPE-RAM."""
+    from .aperam import STATE_NAMES
+    fg = kernel.proc_manager.foreground_pid
+    rows = [(slot, pcb) for slot, pcb in kernel.mem_manager.all_pcbs() if pcb["used"]]
+    if not rows:
+        print("No processes running.")
+        return
+    print(f"{'SLOT':>4} {'PID':>5}  {'NAME':<16} {'STATE':<11} {'RUNS':>8} {'PAGES':>5}  PT-FRAME")
+    for slot, pcb in rows:
+        mark = "*" if pcb["pid"] == fg else " "
+        print(f"{slot:>4} {pcb['pid']:>5}{mark} {pcb['name']:<16} {STATE_NAMES.get(pcb['state'], '?'):<11} "
+              f"{pcb['sched_count']:>8} {pcb['pages_mapped']:>5}  0x{pcb['pt_frame']:02X}")
+    print("(* = foreground)")
+
+def _parse_pid(args, usage):
+    if not args:
+        print(usage)
+        return None
+    try:
+        return int(args[0], 0)
+    except ValueError:
+        print(f"Error: '{args[0]}' is not a valid PID.")
+        return None
+
+def _cmd_kill(args, kernel, io_manager):
+    """Terminates a process."""
+    pid = _parse_pid(args, "Usage: kill <pid>")
+    if pid is not None and not kernel.proc_manager.terminate(pid, "killed"):
+        print(f"Error: no process with PID {pid}.")
+
+def _cmd_fg(args, kernel, io_manager):
+    """Brings a background process to the foreground."""
+    pid = _parse_pid(args, "Usage: fg <pid>")
+    if pid is not None and not kernel.proc_manager.set_foreground_process(pid):
+        print(f"Error: no process with PID {pid}.")
+
+def _cmd_mem(args, kernel, io_manager):
+    """Shows aPE-RAM usage and a map of every physical frame."""
+    from .aperam import FT_FREE, FT_KERNEL, FT_PAGETABLE, FT_USER, ft_decode
+    mm = kernel.mem_manager
+    lay = mm.layout
+    ram = kernel.board.ram
+    counts = mm.usage()
+    print(f"aPE-RAM: {ram.name}  {lay.size:,} bytes = {lay.num_pages} frames x {lay.page_size} bytes")
+    print(f"  kernel {counts[FT_KERNEL]}  page tables {counts[FT_PAGETABLE]}  "
+          f"user {counts[FT_USER]}  free {counts[FT_FREE]}")
+    print("Frame map  (K kernel, T page table, 0-F user page of PCB slot, . free):")
+    symbols = []
+    for entry in mm.frame_table():
+        ftype, owner = ft_decode(entry)
+        symbols.append({FT_FREE: ".", FT_KERNEL: "K", FT_PAGETABLE: "T"}.get(ftype, f"{owner:X}"))
+    for start in range(0, len(symbols), 64):
+        print(f"  0x{start:02X}  {''.join(symbols[start:start + 64])}")
+
+def _cmd_peek(args, kernel, io_manager):
+    """Hex-dumps part of a process's virtual memory."""
+    if len(args) < 2:
+        print("Usage: peek <pid> <addr> [length]   (numbers may be hex, e.g. 0x100)")
+        return
+    try:
+        pid, addr = int(args[0], 0), int(args[1], 0)
+        length = int(args[2], 0) if len(args) > 2 else 64
+    except ValueError:
+        print("Error: pid, addr and length must be numbers.")
+        return
+    process = kernel.proc_manager.get(pid)
+    if process is None:
+        print(f"Error: no process with PID {pid}.")
+        return
+    mm = kernel.mem_manager
+    for row in range(addr, addr + max(length, 0), 16):
+        try:
+            data = mm.load(process.slot, row, min(16, addr + length - row))
+            paddr = mm.translate(process.slot, row)
+        except Exception as e:
+            print(f"  v0x{row:04X}  {e}")
+            break
+        hexes = " ".join(f"{b:02X}" for b in data)
+        text = "".join(chr(b) if 32 <= b < 127 else "." for b in data)
+        print(f"  v0x{row:04X} -> p0x{paddr:05X}  {hexes:<47}  {text}")
 
 def _cmd_exit(args, kernel, io_manager):
     """Exits the current session or application."""
@@ -121,6 +199,7 @@ def _cmd_cmd_info(args, kernel, io_manager):
         print("Usage: cmd_info <command_name>")
         return
     cmd_to_find = args[0].lower()
+    cmd_to_find = io_manager.aliases.get(cmd_to_find, cmd_to_find)
     if cmd_to_find in io_manager.commands:
         info = io_manager.commands[cmd_to_find]
         print(f"Info for command '{cmd_to_find}':")
@@ -137,6 +216,11 @@ def _cmd_sysinfo(args, kernel, io_manager):
     print(f"aPEOS-I Version: {kernel.apeos_version}")
     print(f"Base OS:         {kernel.os_name}")
     print(f"Base OS Version: {kernel.os_version}")
+    board = kernel.board
+    print(f"Motherboard:     {board.name}")
+    print(f"CPU:             {board.cpu.name} ({board.cpu.clock_hz} Hz)")
+    print(f"RAM:             {board.ram.name} ({board.ram.size:,} bytes, {board.ram.page_size}-byte pages)")
+    print(f"RAM file:        {board.ram_file}")
     print("--------------------------")
 
 def _cmd_dir(args, kernel, io_manager):
@@ -289,6 +373,10 @@ _COMMAND_HANDLERS = {
     "type": _cmd_type,
     "delete": _cmd_delete,
     "force_dlt": _cmd_force_dlt,
+    "kill": _cmd_kill,
+    "fg": _cmd_fg,
+    "mem": _cmd_mem,
+    "peek": _cmd_peek,
 }
 
 def execute_command(command, args, kernel, io_manager, is_background=False):
