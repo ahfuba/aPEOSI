@@ -45,13 +45,14 @@ Legend: ✅ done · 🔨 next · 💡 idea · 🐞 known issue
 - [x] Virtual memory: per-process page tables, demand paging, page faults
 - [x] Non-blocking keyboard; round-robin scheduler throttled by the CPU clock
 - [x] System calls: `Sleep`, `ReadLine`
-- [x] Ctrl+C kills the foreground app; clean shutdown
+- [x] Ctrl+C kills the foreground app; clean shutdown; a process killing itself is ended safely after its time slice
 - [x] Commands: `ps`, `kill`, `fg`, `mem`, `peek`, `counter`, `basic`
 - [x] v1 bugs fixed: hard-coded path, endless EOF loop, `list_tasks` crash, `cmd_info` aliases
 
 ### Software
 - [x] **aPE-BASIC**: line-numbered BASIC with program, variables and arrays in RAM, `PEEK`/`POKE` ([reference](docs/aPE-BASIC.md))
-- [x] Example programs in `A:/basic/`: `hello`, `guess`, `primes`, `bits`
+- [x] aPE system keywords in BASIC: hardware info (`CPU$`, `RAMSIZE`), process table (`PSLOT`, `PSTATE`), MMU (`FRAME`, `PHYS`), process control (`SPAWN`, `KILL`, `WAIT`, `YIELD`, `SHELL`)
+- [x] Example programs in `A:/basic/`: `hello`, `guess`, `primes`, `bits`, `taskman`, `mmu`
 - [x] BananaEditor keeps its text in RAM
 
 ### Tools

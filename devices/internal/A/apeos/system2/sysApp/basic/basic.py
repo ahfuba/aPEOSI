@@ -20,6 +20,9 @@ aPEOSI integration:
 * Variables, arrays and the program text live in this process's memory, so
   you can watch them in the aPE-RAM Watchdog. PEEK and POKE read and write
   that memory directly, like on a Commodore 64.
+* aPE system keywords let a program look at the motherboard (CPU$, RAMSIZE),
+  the process table (PSLOT, PSTATE, PNAME$), the MMU (FRAME, PHYS), and
+  control other processes (SPAWN, KILL, WAIT, YIELD, SHELL).
 
 Virtual memory map of a BASIC process:
     0x0000  header: magic "BAS1", statement counter (u32), current line (u16),
@@ -37,6 +40,8 @@ import re
 import struct
 import time
 
+from devices.internal.A.apeos.system2.sys import sys_cmd_exec
+from devices.internal.A.apeos.system2.sys.aperam import OFF_TICK
 from devices.internal.A.apeos.system2.sys.mem_mgr import OutOfMemory, PageFault
 from devices.internal.A.apeos.system2.sys.process_mgr import ReadLine, Sleep
 
@@ -62,6 +67,7 @@ KEYWORDS = {
     "FOR", "TO", "STEP", "NEXT", "END", "STOP", "DIM", "POKE", "SLEEP", "CLS",
     "RANDOMIZE", "AND", "OR", "NOT", "MOD",
     "RUN", "LIST", "NEW", "SAVE", "LOAD", "BYE", "EXIT",
+    "KILL", "WAIT", "YIELD", "SHELL",
 }
 
 TOKEN_RE = re.compile(r"""
@@ -124,6 +130,14 @@ class _Input:
     def __init__(self, prompt, targets):
         self.prompt = prompt
         self.targets = targets
+
+
+class _Wait:
+    def __init__(self, pid):
+        self.pid = pid
+
+
+_YIELD = object()
 
 
 class Basic:
@@ -459,10 +473,8 @@ class Basic:
             self.pos += 1
             if val in FUNCTIONS and self._at_op("("):
                 return self._call(val, self._args())
-            if val == "RND":
-                return random.random()
-            if val == "TIMER":
-                return round(time.monotonic() - self.started, 2)
+            if val in SYSVARS:
+                return SYSVARS[val](self)
             if self._at_op("("):
                 return self._get_elem(val, self._indices())
             return self._get_var(val)
@@ -547,6 +559,11 @@ class Basic:
                     req, self.request = self.request, None
                     if isinstance(req, _Input):
                         yield from self._do_input(req)
+                    elif isinstance(req, _Wait):
+                        while req.pid in self.kernel.proc_manager.processes:
+                            yield Sleep(0.05)
+                    elif req is _YIELD:
+                        yield
                     else:
                         yield req
                 elif count % QUANTUM == 0:
@@ -607,8 +624,8 @@ class Basic:
     def _lvalue(self):
         """Parses a variable or array element; returns (name, indices or None)."""
         name = self._name()
-        if name in FUNCTIONS:
-            raise BasicError("SYNTAX")
+        if name in FUNCTIONS or name in SYSVARS:
+            raise BasicError(f"{name} IS RESERVED")
         return name, (self._indices() if self._at_op("(") else None)
 
     def _assign(self, target, value):
@@ -820,6 +837,35 @@ class Basic:
     def _st_randomize(self):
         random.seed()
 
+    # --- aPE system statements ----------------------------------------------------
+    def _st_kill(self):
+        pid = self._int(self._expr())
+        if not self.kernel.proc_manager.terminate(pid, "killed by BASIC"):
+            raise BasicError(f"NO PROCESS {pid}")
+        if pid == self.pid:
+            self.idx = None  # killed ourselves: the kernel ends us after this step
+
+    def _st_wait(self):
+        pid = self._int(self._expr())
+        if pid == self.pid:
+            raise BasicError("CAN'T WAIT FOR MYSELF")
+        self.request = _Wait(pid)
+
+    def _st_yield(self):
+        self.request = _YIELD
+
+    def _st_shell(self):
+        command = _str_arg(self._expr()).strip()
+        info = _command_info(self, command)
+        if info is None:
+            raise BasicError(f"UNKNOWN COMMAND: {command.split()[0] if command else ''}")
+        if info.get("category") == "app":
+            raise BasicError("USE SPAWN TO START PROGRAMS")
+        if self.col:
+            self._out("\n")
+        self.kernel.io_manager.handle_input(command)
+        self.col = 0
+
     # --- commands --------------------------------------------------------------
     def _st_run(self):
         self._clear_variables()
@@ -962,6 +1008,98 @@ def _peek_fn(self, addr):
     return float(self.mem.load(self._int(addr), 1)[0])
 
 
+def _hex(self, x):
+    value = self._int(x)
+    if value < 0:
+        raise ValueError
+    return f"{value:X}"
+
+
+# --- aPE system functions ---------------------------------------------------------
+def _pcb_of(self, pid):
+    pid = self._int(pid)
+    for _, pcb in self.kernel.mem_manager.all_pcbs():
+        if pcb["used"] and pcb["pid"] == pid:
+            return pcb
+    return None
+
+
+def _pcb_field(field, missing):
+    def fn(self, pid):
+        pcb = _pcb_of(self, pid)
+        if pcb is None:
+            return missing
+        value = pcb[field]
+        return value if isinstance(value, str) else float(value)
+    return fn
+
+
+def _pslot(self, slot):
+    slot = self._int(slot)
+    if not 0 <= slot < self.kernel.mem_manager.layout.max_procs:
+        raise ValueError
+    pcb = self.kernel.mem_manager.read_pcb(slot)
+    return float(pcb["pid"]) if pcb["used"] else 0.0
+
+
+def _frame(self, vaddr):
+    paddr = self.mem.physical(self._int(vaddr))
+    return -1.0 if paddr is None else float(paddr // self.kernel.mem_manager.ps)
+
+
+def _phys(self, vaddr):
+    paddr = self.mem.physical(self._int(vaddr))
+    return -1.0 if paddr is None else float(paddr)
+
+
+def _command_info(self, command):
+    parts = command.split()
+    if not parts:
+        return None
+    io = self.kernel.io_manager
+    name = io.aliases.get(parts[0].lower(), parts[0].lower())
+    return io.commands.get(name)
+
+
+def _spawn(self, command):
+    """Starts an aPEOSI program in the background. Returns its PID."""
+    command = _str_arg(command).strip()
+    info = _command_info(self, command)
+    if info is None or info.get("category") != "app":
+        raise BasicError(f"NOT A PROGRAM: {command.split()[0] if command else ''}")
+    if info.get("allow_bg", "").lower() != "true":
+        raise BasicError(f"{info['command'].upper()} CAN'T RUN IN THE BACKGROUND")
+    if self.col:
+        self._out("\n")
+    io = self.kernel.io_manager
+    process = sys_cmd_exec._launch_app(info, command.split()[1:], self.kernel, io, True)
+    self.col = 0
+    if process is None:
+        raise BasicError("SPAWN FAILED")
+    return float(process.pid)
+
+
+def _board(self):
+    return self.kernel.board
+
+
+# Names that read like variables but ask the system for a value.
+SYSVARS = {
+    "RND": lambda s: random.random(),
+    "TIMER": lambda s: round(time.monotonic() - s.started, 2),
+    "PID": lambda s: float(s.pid),
+    "TICK": lambda s: float(s.kernel.mem_manager.ram.read_u32(OFF_TICK)),
+    "NPROC": lambda s: float(sum(1 for _, p in s.kernel.mem_manager.all_pcbs() if p["used"])),
+    "FREEMEM": lambda s: float(s.kernel.mem_manager.usage()[0] * s.kernel.mem_manager.ps),
+    "RAMSIZE": lambda s: float(_board(s).ram.size),
+    "PAGESIZE": lambda s: float(_board(s).ram.page_size),
+    "CPUHZ": lambda s: float(_board(s).cpu.clock_hz),
+    "CPU$": lambda s: _board(s).cpu.name,
+    "RAM$": lambda s: _board(s).ram.name,
+    "BOARD$": lambda s: _board(s).name,
+}
+
+
 # name: (min args, max args, function(interpreter, *args))
 FUNCTIONS = {
     "ABS": (1, 1, lambda s, x: abs(s._num(x))),
@@ -984,6 +1122,16 @@ FUNCTIONS = {
     "CHR$": (1, 1, _chr),
     "ASC": (1, 1, _asc),
     "PEEK": (1, 1, _peek_fn),
+    "HEX$": (1, 1, _hex),
+    # aPE system functions
+    "PSLOT": (1, 1, _pslot),
+    "PSTATE": (1, 1, _pcb_field("state", 0.0)),
+    "PNAME$": (1, 1, _pcb_field("name", "")),
+    "PRUNS": (1, 1, _pcb_field("sched_count", 0.0)),
+    "PPAGES": (1, 1, _pcb_field("pages_mapped", 0.0)),
+    "FRAME": (1, 1, _frame),
+    "PHYS": (1, 1, _phys),
+    "SPAWN": (1, 1, _spawn),
 }
 
 STATEMENTS = {
@@ -995,4 +1143,6 @@ STATEMENTS = {
     "RANDOMIZE": Basic._st_randomize, "RUN": Basic._st_run, "LIST": Basic._st_list,
     "NEW": Basic._st_new, "SAVE": Basic._st_save, "LOAD": Basic._st_load,
     "BYE": Basic._st_bye, "EXIT": Basic._st_bye,
+    "KILL": Basic._st_kill, "WAIT": Basic._st_wait, "YIELD": Basic._st_yield,
+    "SHELL": Basic._st_shell,
 }

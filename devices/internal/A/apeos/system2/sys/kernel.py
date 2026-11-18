@@ -185,20 +185,33 @@ class Kernel:
             tick = self.mem_manager.tick()
             self.mem_manager.set_current_pid(process.pid)
             self.proc_manager.record_run(process, tick)
+            self.proc_manager.running_pid = process.pid
+            error = None
             try:
                 message, process.inbox = process.inbox, None
                 request = process.task.send(message)
             except StopIteration:
+                request, error = None, StopIteration
+            except Exception as e:
+                request, error = None, e
+            finally:
+                # --- context switch out: back to the kernel ---
+                self.proc_manager.running_pid = None
+                self.mem_manager.set_current_pid(KERNEL_PID)
+
+            if error is StopIteration:
                 self.proc_manager.terminate(process.pid)
                 terminated = True
                 continue
-            except Exception as e:
-                self.proc_manager.terminate(process.pid, f"error: {e}")
+            if error is not None:
+                self.proc_manager.terminate(process.pid, f"error: {error}")
                 terminated = True
                 continue
-            finally:
-                # --- context switch out: back to the kernel ---
-                self.mem_manager.set_current_pid(KERNEL_PID)
+            if process.kill_pending is not None:
+                reason, quiet = process.kill_pending
+                self.proc_manager.terminate(process.pid, reason, quiet)
+                terminated = True
+                continue
 
             # --- handle the system call the process made ---
             if isinstance(request, Sleep):

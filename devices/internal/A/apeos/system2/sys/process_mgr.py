@@ -65,6 +65,7 @@ class Process:
         self.inbox = None       # value sent into the generator on its next step
         self.wake_at = 0.0      # for SLEEPING
         self.prompt = ""        # for WAITING_FOR_INPUT
+        self.kill_pending = None  # (reason, quiet) if killed while it was running
         self._terminated = False
 
     @property
@@ -88,6 +89,7 @@ class ProcessManager:
         self.processes = {}
         self.next_pid = 1
         self.foreground_pid = None  # PID of the process that owns the keyboard
+        self.running_pid = None     # PID on the CPU right now (set by the kernel)
 
     def create_process(self, app_instance, command_name, is_foreground=True):
         """Creates a PCB + address space in RAM and starts the app."""
@@ -119,9 +121,16 @@ class ProcessManager:
 
     def terminate(self, pid, reason=None, quiet=False):
         """Ends a process and gives all its memory back."""
-        process = self.processes.pop(pid, None)
+        process = self.processes.get(pid)
         if process is None:
             return False
+        if pid == self.running_pid:
+            # The process is killing itself mid-step. Freeing its memory now
+            # would pull the floor out from under it, so the kernel finishes
+            # the job when its time slice ends.
+            process.kill_pending = (reason, quiet)
+            return True
+        del self.processes[pid]
         try:
             process.task.close()
         except Exception:

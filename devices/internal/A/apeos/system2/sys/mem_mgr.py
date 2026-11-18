@@ -217,6 +217,13 @@ class AddressSpace:
     def store(self, vaddr, data):
         self._mm.store(self._slot, vaddr, data)
 
+    def physical(self, vaddr):
+        """The physical address behind vaddr, or None if it is not mapped."""
+        try:
+            return self._mm.translate(self._slot, vaddr)
+        except PageFault:
+            return None
+
     def load_u32(self, vaddr):
         return struct.unpack("<I", self.load(vaddr, 4))[0]
 

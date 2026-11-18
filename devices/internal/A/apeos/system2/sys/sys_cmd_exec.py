@@ -327,7 +327,7 @@ def _launch_app(app_info, args, kernel, io_manager, is_background):
     if not module_name or not class_name:
         print(f"Error: Application '{app_info.get('command')}' is not configured correctly.")
         print("Required fields 'app_module' and 'app_class' are missing in sys_cmd.csv.")
-        return
+        return None
 
     try:
         # Dynamically import the module
@@ -342,12 +342,13 @@ def _launch_app(app_info, args, kernel, io_manager, is_background):
         
         # Create a process instead of running it directly
         is_foreground = not is_background
-        kernel.proc_manager.create_process(app_instance, app_info['command'], is_foreground)
+        return kernel.proc_manager.create_process(app_instance, app_info['command'], is_foreground)
     except ImportError as e:
         print(f"Error: Could not find application module: {module_name}")
         print(f"Import Error: {e}")
     except (AttributeError, Exception) as e:
         print(f"Error launching application '{class_name}': {e}")
+    return None
 
 # --- Command Dispatch Table ---
 # Maps command strings to their handler functions.

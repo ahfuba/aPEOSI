@@ -2,7 +2,7 @@
 
 A small line-numbered BASIC for aPEOSI, in the style of 1980s home computers.
 Code: `devices/internal/A/apeos/system2/sysApp/basic/basic.py`.
-Examples: `A:/basic/` (`hello.bas`, `guess.bas`, `primes.bas`, `bits.bas`).
+Examples: `A:/basic/` (`hello.bas`, `guess.bas`, `primes.bas`, `bits.bas`, `taskman.bas`, `mmu.bas`).
 
 ```
 basic                    open the BASIC prompt
@@ -69,7 +69,63 @@ Several statements can share a line, separated by `:`.
 | `ABS INT SGN SQR` | `LEN(s$)` | `PEEK(addr)` |
 | `SIN COS TAN ATN` | `LEFT$(s$, n)` `RIGHT$(s$, n)` | `RND` / `RND(1)`: 0 ≤ x < 1 |
 | `EXP LOG` | `MID$(s$, start[, len])` | `TIMER`: seconds since BASIC started |
-| | `STR$(n)` `VAL(s$)` `CHR$(n)` `ASC(s$)` | |
+| | `STR$(n)` `VAL(s$)` `CHR$(n)` `ASC(s$)` `HEX$(n)` | |
+
+## aPE system keywords
+
+These connect BASIC to aPEOSI itself: the motherboard, the process table,
+the MMU, and other programs. `taskman.bas` and `mmu.bas` show them in use.
+
+### Hardware (read like variables)
+
+| Name | Value |
+|---|---|
+| `BOARD$` | motherboard name |
+| `CPU$`, `CPUHZ` | CPU module name and clock |
+| `RAM$`, `RAMSIZE`, `PAGESIZE` | RAM module name, size in bytes, page size |
+| `FREEMEM` | free physical RAM in bytes, right now |
+| `TICK` | the scheduler tick from the RAM header |
+
+### Processes
+
+| Keyword | Does |
+|---|---|
+| `PID` | this program's own process ID |
+| `NPROC` | number of processes |
+| `PSLOT(i)` | PID in process-table slot `i` (0–15), or `0` if the slot is empty |
+| `PSTATE(pid)` | `1` running, `2` waiting for input, `4` sleeping, `0` no such process |
+| `PNAME$(pid)` `PRUNS(pid)` `PPAGES(pid)` | name, times scheduled, pages of memory |
+| `P = SPAWN("counter 50")` | start a program in the background; returns its PID |
+| `KILL pid` | end a process (`KILL PID` ends this one) |
+| `WAIT pid` | sleep until that process has ended |
+| `YIELD` | give the CPU to the other processes now |
+| `SHELL "mem"` | run a built-in aPEOSI command (`ps`, `mem`, `dir`, ...); programs go through `SPAWN` |
+
+To list every process:
+
+```
+10 FOR S = 0 TO 15
+20 P = PSLOT(S)
+30 IF P > 0 THEN PRINT P, PNAME$(P), PRUNS(P)
+40 NEXT S
+```
+
+### Memory (MMU)
+
+| Function | Value |
+|---|---|
+| `FRAME(vaddr)` | the physical frame that this program's virtual address lives in, or `-1` if it is not mapped |
+| `PHYS(vaddr)` | the physical address behind it, or `-1` |
+
+`FRAME` and `PHYS` only *look*: they never map a page. `POKE` maps one
+(demand paging), so `FRAME(&H8000)` turns from `-1` into a frame number after
+the first `POKE &H8000, …`.
+
+BASIC can see where its memory is but can't touch other processes' memory
+or the kernel's tables. `PEEK` and `POKE` only reach this program's own
+address space, as memory protection requires.
+
+These names are reserved: `PID = 5` gives `?PID IS RESERVED ERROR`.
 
 ## Errors
 
