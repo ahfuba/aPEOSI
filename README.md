@@ -16,7 +16,7 @@ Therefore I decided to program something from scratch to learn the basics of ker
 
 Afterwards, I went and decided to program something sees a `\disks` folder from Windows (or any other OS you are using) file system as Devices/Disks connected to the "virtual" computer. (Well, this isn't a virtual machine, so it's just going to inherit the system information of your own computer) You will be able to change the disk/device type by editing a config file inside the folder.
 
-There is a base kernel that works, not same, but similar to a kernel. The model I was inspired was Windows NT, because it was more of a closed ecosystem than Linux kernel (please don't execute me Arch fans) which was perfect for such a project.
+There is a base kernel that works, not same, but similar to a kernel. The model I was inspired was Windows NT, because it was more of a closed ecosystem and well a sstem I like more than Linux kernel's file system (please don't execute me Arch fans) which was perfect for such a project.
 
 Well, I actually got this "kernel inspiration" idea by asking. I certainly don't know what I am doing or why I am doing this. So... um... yea.
 
