@@ -13,7 +13,8 @@ Legend: ✅ done · 🔨 current stage · 💡 planned · 🐞 known issue
 
 ```
 ┌──────────────────────────────── TOOLS ────────────────────────────────┐
-│  aPE-Watchdog ✅        aPE-Display 💡        Benchmarks 💡            │
+│  aPE-Watchdog ✅ (recording & replay 💡)   aPE-Display 💡               │
+│  aPE-DevKit 💡   Benchmarks 💡                                          │
 └───────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────── SOFTWARE ───────────────────────────────┐
 │  aPE-BASIC ✅   Banana Editor ✅   aPE-VM 💡   aPE-C 💡   .apx 💡       │
@@ -23,8 +24,9 @@ Legend: ✅ done · 🔨 current stage · 💡 planned · 🐞 known issue
 │  file system on a disk image 💡 · users & permissions 💡              │
 └───────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────── HARDWARE (/motherboard) ──────────────────────┐
-│  aPE-R RAM .aperam ✅   aPE-P CPU ✅ (clock only)   aPE-G GPU 💡       │
-│  aPE-K keyboard .apebus 💡   aPE-B board .apemb 💡   cache 💡           │
+│  RAM .aperam ✅   CPU ✅ clock only (.apecpu 💡)   board .apemb 💡     │
+│  GPU .apegpu 💡   bus .apebus 💡 (keyboard, sound)   disk .apedisk 💡   │
+│  network .apenet 💡   cache 💡                                          │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -43,6 +45,7 @@ Each stage builds what the next one needs.
 | 💡 **4** | Learn C | designing aPE-C |
 | 💡 **5** | **aPE-C**, compiling to aPE-VM | a systems language for aPEOSI |
 | 💡 **6** | Full hardware simulation: aPE-VM grows into a real CPU with interrupts | a complete simulated computer |
+| 💡 *lab* | After Stage 3: lab devices (GPU cores, sound, networking) for course topics | hands-on signals, graphics and networking |
 
 ---
 
@@ -82,6 +85,13 @@ Each stage builds what the next one needs.
 Goal: 1980s-style games in aPE-BASIC, on the first real devices.
 Rule: **every device arrives together with the software that uses it.**
 
+### Toolkit (first)
+- [ ] **aPE-DevKit** (`apedk` package, `ape_devkit.py` tool): describe a device in Python
+      (parameters, registers, memory regions) and compile it into a `.ape<class>` module file.
+      Validates the design at build time; the compiled file is pure data, so device mods are safe to share.
+      Can compile the existing JSON specs too
+- [ ] Device descriptors: every device file declares its named regions, so tools can show any device without device-specific code
+
 ### Hardware
 - [ ] **aPE-B1 board file `board0.apemb`**: a simple device list the OS reads at boot to discover its hardware
       (the PCI idea, without full PCI detail)
@@ -97,7 +107,9 @@ Rule: **every device arrives together with the software that uses it.**
 
 ### Tools
 - [ ] **aPE-Display**: a window that draws VRAM at the GPU's `refresh_hz`
-- [ ] aPE-Watchdog can open any aPE device file, not just RAM
+- [ ] aPE-Watchdog can open any aPE device file, not just RAM, using its region descriptors
+- [ ] **Recording and slow-motion replay** (snapshot level): aPE-Watchdog saves what changed each frame
+      into a recording and plays it back at any speed
 
 ### Cleanup
 - [ ] Fix the [known issues](#-known-issues) below
@@ -166,11 +178,13 @@ the BIOS's job, and the kernel loads programs straight into memory (like
 - [ ] **Timer interrupt** every N cycles → real preemptive multitasking
 - [ ] **Trap instruction** for system calls; **privilege bit** for protected instructions
 - [ ] Context switches save real registers into the PCB (visible in aPE-Watchdog)
+- [ ] CPU state lives in `cpu0.apecpu`: registers, PC, flags, privilege bit, cycle counter
 
 ### Timing
 - [ ] **Simulated time**: a cycle counter independent of Python's real speed
 - [ ] RAM modules get `latency_cycles`; CPU modules get cycle costs per instruction
-- [ ] **Cache module**: shows the "memory wall" (a 3 GHz CPU waits about 45 cycles for DRAM)
+- [ ] **Cache module**: shows the "memory wall" (a 3 GHz CPU waits about 45 cycles for DRAM); a region of `cpu0.apecpu`
+- [ ] **Deterministic replay**: record only the inputs, re-run the simulation exactly; perfect slow motion and rewind
 
 ### Software
 - [ ] **Assembler**: `.aps` source → `.apx` machine code
@@ -188,10 +202,27 @@ the BIOS's job, and the kernel loads programs straight into memory (like
 
 ---
 
+## 💡 Lab devices (after Stage 3)
+
+Devices that turn course topics into experiments. Each arrives with programs that use it,
+and with something to observe in aPE-Watchdog.
+
+- [ ] **aPE-G2 GPU with shader cores**: N cores, each with its own registers and program counter in
+      `gpu0.apegpu`, all running the same aPE-VM shader on different pixels. Watch the image being drawn core by core
+- [ ] **aPE-S1 sound chip** (bus device in `bus0.apebus`): sample buffer + DAC registers.
+      Topics: sampling, the Nyquist rate, quantization, buffer underruns, interrupts
+- [ ] **aPE-N1 network card** (`net0.apenet`) and a **shared medium** (`air0.apenet`):
+      two aPEOSI computers exchange packets through one file. The medium can add noise, drop packets
+      and cause collisions. Topics: packets, MAC addresses, collisions, retransmission
+
+---
+
 ## Side quests (any stage)
 
 ### OS
-- [ ] Own **file system** on an aPE-D1 disk image (superblock, FAT or inodes, blocks) instead of host folders
+- [ ] Own **file system** on an aPE-D1 disk, `disk0.apedisk` (superblock, FAT or inodes, blocks), instead of host folders.
+      Disks are persistent: never created or overwritten at boot, made by a separate format tool, backed up by copying the file
+- [ ] Move drives from `/devices` to disk modules under `/motherboard/disk/`, so the whole computer lives in one folder
 - [ ] Shell: pipes `|`, redirection `>` `<`, batch scripts, environment variables, quoted arguments
 - [ ] **Users and permissions**: login, file ownership, using the `level` column in `sys_cmd.csv`
 - [ ] Real logging to a file (`logtime`, `logdate`)
@@ -205,6 +236,7 @@ the BIOS's job, and the kernel loads programs straight into memory (like
 - [ ] `pytest` tests that drive the shell from a script
 - [ ] GitHub Actions CI
 - [ ] **Benchmarks**: measure context-switch, system-call and memory costs, to prove the README's "Python is too heavy" claim
+- [ ] **Write-log recording**: the simulator logs every write (time, address, old, new), so recordings miss nothing
 
 ---
 
@@ -228,4 +260,5 @@ Name it by the [naming scheme](NAMING.md).
 | CPU | a JSON spec, e.g. `ape-p2.json` | `motherboard/cpu/` | [modding guide](motherboard/README.md) |
 | App | a Python class with `run()` that yields system calls | `sysApp/` + a line in `sys_cmd.csv` | [how it works](docs/how-aPEOSI-1.2-works.md) |
 | BASIC program | a `.bas` file | anywhere on a drive | [aPE-BASIC](docs/aPE-BASIC.md) |
+| Device module (Stage 1+) | a Python description compiled with aPE-DevKit | `motherboard/<class>/` | aPE-DevKit docs (planned) |
 | New hardware class | a class code, a `.ape<class>` extension and a header after the common header | `apedev.py` | [formats](docs/aPE-hardware.md) |

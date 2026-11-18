@@ -26,17 +26,19 @@ Host-side tools are Python programs at the repo root named `ape_<tool>.py`:
 
 ## 3. Hardware modules: `aPE-<letter><model>`
 
-Each device class has one letter, so model names never collide with each other
-or with product names.
+Each kind of device has one letter, so model names never collide with each
+other or with product names.
 
-| Letter | Class | Examples | Spec file |
+| Letter | Device | Examples | Spec file |
 |---|---|---|---|
 | **B** | motherboard | aPE-B1 Classic | `motherboard/board.json` |
 | **P** | processor (CPU) | aPE-P1, aPE-P0 Turtle | `motherboard/cpu/ape-p1.json` |
 | **R** | RAM | aPE-R16K, aPE-R64K, aPE-R256K | `motherboard/ram/ape-r16k.json` |
-| **G** | GPU | aPE-G1 | `motherboard/gpu/ape-g1.json` |
-| **K** | keyboard controller | aPE-K1 | `motherboard/bus/ape-k1.json` |
+| **G** | GPU | aPE-G1 (framebuffer), aPE-G2 (shader cores) | `motherboard/gpu/ape-g1.json` |
 | **D** | disk | aPE-D1 | `motherboard/disk/ape-d1.json` |
+| **N** | network card | aPE-N1 | `motherboard/net/ape-n1.json` |
+| **K** | keyboard controller (bus device) | aPE-K1 | `motherboard/bus/ape-k1.json` |
+| **S** | sound chip (bus device) | aPE-S1 | `motherboard/bus/ape-s1.json` |
 
 - The model is a number, or a size for RAM (`16K`). An optional nickname can follow: `aPE-P0 Turtle`.
 - The spec file name is the model name in lowercase, with spaces as hyphens: `aPE-P0 Turtle` → `ape-p0-turtle.json`.
@@ -46,18 +48,37 @@ or with product names.
 
 At runtime each device instance is one binary file. Every file starts with
 the common aPE device header ([formats](docs/aPE-hardware.md)), whose class
-code matches the extension.
+code matches the extension: the extension is always `.ape` + the class code in lowercase.
 
-| Class code | Extension | Instance file | Status |
-|---|---|---|---|
-| `RAM` | `.aperam` | `ram0.aperam` | implemented |
-| `MB` | `.apemb` | `board0.apemb` | reserved |
-| `BUS` | `.apebus` | `bus0.apebus` | reserved |
-| `GPU` | `.apegpu` | `gpu0.apegpu` | reserved |
+| Class code | Extension | Instance file | Holds | Lifetime | Status |
+|---|---|---|---|---|---|
+| `RAM` | `.aperam` | `ram0.aperam` | all memory: kernel tables, processes | volatile | implemented |
+| `MB` | `.apemb` | `board0.apemb` | the list of devices the OS discovers at boot | rebuilt at boot | reserved |
+| `BUS` | `.apebus` | `bus0.apebus` | registers of every bus device (keyboard, sound, ...) | volatile | reserved |
+| `GPU` | `.apegpu` | `gpu0.apegpu` | VRAM, display registers, later shader cores | volatile | reserved |
+| `CPU` | `.apecpu` | `cpu0.apecpu` | registers, PC, flags, cycle counter, cache | volatile | reserved |
+| `DISK` | `.apedisk` | `disk0.apedisk` | **files: user data** | **persistent** | reserved |
+| `NET` | `.apenet` | `net0.apenet`, `air0.apenet` | a network card's buffers and link state, or a shared medium | volatile | reserved |
 
-Device files are created at boot and not committed: `.aperam`, `.apemb`, `.apebus` and `.apegpu` files are git-ignored.
-A new device class needs a class code of up to 4 letters, a matching `.ape<code>` extension,
-and an entry in `apedev.py`.
+Rules:
+
+- **The motherboard file lists devices; each device keeps its own state.** `board0.apemb`
+  says "there is a sound chip and a network card"; their registers and buffers live in their own files.
+- **The bus is a container.** Small devices (keyboard, sound, later a timer) share
+  `bus0.apebus`, each in its own region. They need no class of their own.
+- **New classes are rare.** A device gets its own class only when its state is too big or
+  too different for the bus. Until then it is a bus device.
+- **Volatile files** are wiped and recreated at every boot. They are safe to delete.
+- **Disks are persistent.** A `.apedisk` file *is* the disk: deleting it deletes the data,
+  and copying it is a complete backup. aPEOSI never creates or overwrites a disk file on
+  its own; new disks are made by a separate format tool.
+- **Modules vs instances.** A compiled device module (from aPE-DevKit) uses the same
+  extension as its instances, told apart by the name: `ape-g1.apegpu` is the module
+  (model name), `gpu0.apegpu` is the running instance (`<class><n>`).
+
+All device files are git-ignored: volatile ones because they are recreated at boot,
+disks because they hold personal data. A new device class needs a class code of up to
+4 letters, a matching `.ape<code>` extension, and an entry in `apedev.py`.
 
 ## 5. Program and file types
 

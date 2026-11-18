@@ -5,12 +5,18 @@ share one **common device header**, followed by a header for that **device
 class**. A tool can read the first 32 bytes of any aPE device file and know
 what it is.
 
-| Extension | Device class | Class code | Status |
-|---|---|---|---|
-| `.aperam` | RAM module (SODIMM) | `RAM\0` | implemented in 1.2 |
-| `.apemb` | Motherboard / PCI configuration space | `MB\0\0` | reserved |
-| `.apebus` | Bus devices (I/O ports, timers, keyboard controller, ...) | `BUS\0` | reserved |
-| `.apegpu` | GPU: VRAM and display registers | `GPU\0` | reserved |
+| Extension | Device class | Class code | Lifetime | Status |
+|---|---|---|---|---|
+| `.aperam` | RAM module (SODIMM) | `RAM\0` | volatile | implemented in 1.2 |
+| `.apemb` | Motherboard: the device list | `MB\0\0` | rebuilt at boot | reserved |
+| `.apebus` | Bus devices (keyboard controller, sound chip, timers, ...) | `BUS\0` | volatile | reserved |
+| `.apegpu` | GPU: VRAM, display registers, later shader cores | `GPU\0` | volatile | reserved |
+| `.apecpu` | CPU: registers, flags, cycle counter, cache | `CPU\0` | volatile | reserved |
+| `.apedisk` | Disk: persistent file storage | `DISK` | **persistent** | reserved |
+| `.apenet` | Network card, or a shared network medium | `NET\0` | volatile | reserved |
+
+The extension is always `.ape` + the class code in lowercase. Naming rules,
+including module vs instance files, are in [`NAMING.md`](../NAMING.md).
 
 All numbers are little-endian. Code: `devices/internal/A/apeos/system2/sys/apedev.py`.
 
@@ -101,25 +107,56 @@ Reading one is a page fault and the process is terminated.
 
 `u16 length` followed by the last line typed into aPEOSI (UTF-8).
 
-## `.apemb`: motherboard / PCI (reserved)
+## Reserved classes
 
-Planned: a PCI-style configuration space. One 256-byte config block per slot
-(vendor ID, device ID, class code, base address registers), so the kernel can
-*enumerate* the hardware at boot like a real BIOS does, instead of reading
-`board.json` directly. Class code `MB\0\0`.
+These formats are planned; their exact layouts are designed when the first
+software that uses them is built.
 
-## `.apebus`: bus devices (reserved)
+### `.apemb`: motherboard (reserved)
 
-Planned: memory-mapped I/O devices (keyboard controller, timer, text screen)
-sitting on a bus. Each device exposes a few registers; writing a register
-makes the device do something, and devices can raise interrupts. Class code
-`BUS\0`.
+The device list the OS reads at boot to discover its hardware: which GPU,
+bus devices, disks and network cards are plugged in, and which file each one
+lives in. It plays the role of PCI enumeration, without the full PCI detail.
+The motherboard *lists* devices; each device keeps its own state in its own file.
 
-## `.apegpu`: GPU (reserved)
+### `.apebus`: bus devices (reserved)
 
-Planned: the GPU's VRAM (the framebuffer) plus a few display registers.
-The GPU card itself is listed in the motherboard's `.apemb`; its memory is
-its own file, e.g. `gpu0.apegpu`. aPE-Display draws it. Class code `GPU\0`.
+A container for small memory-mapped I/O devices. Each device on the bus gets
+its own region of registers (and buffers), plus a way to raise interrupts:
 
-To add a new class, pick a 4-byte class code, write the class header after
-the common header, and register the extension in `apedev.py`. Naming rules are in [`NAMING.md`](../NAMING.md).
+- **aPE-K1 keyboard controller**: key codes and a "key waiting" flag, for reading keys without Enter
+- **aPE-S1 sound chip**: control registers plus a sample buffer the OS must refill before it runs dry
+
+### `.apegpu`: GPU (reserved)
+
+- **aPE-G1**: VRAM (the framebuffer) plus display registers. aPE-Display draws it at the GPU's `refresh_hz`.
+- **aPE-G2**: adds shader cores. Each core has its own registers and program
+  counter in its own region and runs aPE-VM bytecode on its own pixel, so the
+  Watchdog can show every core working.
+
+### `.apecpu`: CPU (reserved)
+
+The CPU's state once aPEOSI has a virtual CPU: general registers, program
+counter, flags, privilege bit, interrupt state, the cycle counter, and the
+cache as its own region.
+
+### `.apedisk`: disk (reserved)
+
+A whole disk in one file: a superblock, a file table (FAT or inodes) and data
+blocks. Unlike every other device file, a disk is **persistent**:
+
+- deleting the file deletes the data on it; copying the file is a complete backup
+- aPEOSI never creates or overwrites a disk file at boot; a separate format tool makes new disks
+- disk files are git-ignored, because they hold personal data
+
+### `.apenet`: network (reserved)
+
+- **`net0.apenet`**: a network card (aPE-N1): send and receive buffers, its address and link state.
+- **`air0.apenet`**: a shared medium. Two aPEOSI computers whose cards point at the same
+  medium file can exchange packets. The medium can add noise, drop packets and
+  produce collisions, so retransmission and collision handling can be observed.
+
+## Adding a class
+
+Pick a class code of up to 4 letters, write the class header after the common
+header, and register the extension in `apedev.py`. Naming rules are in [`NAMING.md`](../NAMING.md).
