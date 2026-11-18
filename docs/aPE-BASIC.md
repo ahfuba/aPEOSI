@@ -148,7 +148,7 @@ addresses:
 | `&H4000` | the program, as text |
 | `&H8000` | free for your own `POKE`s |
 
-Open the aPE-RAM Watchdog while a program runs: the statement counter
+Open the aPE-Watchdog while a program runs: the statement counter
 ticks in the header page, and variables change in the variable table.
 `POKE` into `&H8000` and a new page appears (demand paging); `bits.bas`
 draws an animation there.

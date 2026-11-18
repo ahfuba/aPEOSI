@@ -5,7 +5,7 @@ from datetime import datetime
 
 class FileSystemManager:
     """
-    Manages the virtual file system of aPEOS-I.
+    Manages the virtual file system of aPEOSI.
 
     It treats subdirectories inside a 'disks' folder at the project root
     as mountable drives for the emulated OS.
@@ -300,7 +300,7 @@ class FileSystemManager:
         drive_root_path = self.mounted_drives[self.current_drive]['path']
         relative_path = os.path.relpath(new_host_path, drive_root_path)
 
-        # Format for aPEOS: use backslashes and start with one
+        # aPEOSI paths use forward slashes and start with one
         self.current_path = '/' + relative_path.replace('\\', '/')
         if self.current_path == '/.': # relpath can return '.' for the root
             self.current_path = '/'

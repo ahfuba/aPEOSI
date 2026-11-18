@@ -101,7 +101,7 @@ def _cmd_peek(args, kernel, io_manager):
 
 def _cmd_exit(args, kernel, io_manager):
     """Exits the current session or application."""
-    print("Shutting down aPEOS-I...")
+    print("Shutting down aPEOSI...")
     kernel.running = False
 
 def _cmd_time(args, kernel, io_manager):
@@ -145,7 +145,7 @@ def _cmd_logdate(args, kernel, io_manager):
 
 def _cmd_version(args, kernel, io_manager):
     """Displays the current system version."""
-    print(f"aPEOS-I Version: {kernel.apeos_version}")
+    print(f"aPEOSI Version: {kernel.apeos_version}")
 
 def _cmd_fetchbanana(args, kernel, io_manager):
     """Fetches system information alongside a banana ASCII art."""
@@ -213,7 +213,7 @@ def _cmd_cmd_info(args, kernel, io_manager):
 def _cmd_sysinfo(args, kernel, io_manager):
     """Displays system information including OS name and version."""
     print("--- System Information ---")
-    print(f"aPEOS-I Version: {kernel.apeos_version}")
+    print(f"aPEOSI Version: {kernel.apeos_version}")
     print(f"Base OS:         {kernel.os_name}")
     print(f"Base OS Version: {kernel.os_version}")
     board = kernel.board

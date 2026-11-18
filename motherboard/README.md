@@ -7,8 +7,8 @@ file, so you can swap parts or make your own.
 motherboard/
 ├── board.json          which parts are plugged in
 ├── cpu/                CPU modules
-│   ├── ape-c1.json         200 Hz, the default
-│   └── ape-c0-turtle.json  4 Hz, slow enough to follow every context switch
+│   ├── ape-p1.json         200 Hz, the default
+│   └── ape-p0-turtle.json  4 Hz, slow enough to follow every context switch
 ├── ram/                RAM modules (SODIMMs)
 │   ├── ape-r16k.json       64 frames x 256 B, the default (easy to watch)
 │   ├── ape-r64k.json       256 frames x 256 B
@@ -22,8 +22,8 @@ Edit `board.json`:
 
 ```json
 {
-  "name": "aPE-Board Classic",
-  "cpu": "cpu/ape-c0-turtle.json",
+  "name": "aPE-B1 Classic",
+  "cpu": "cpu/ape-p0-turtle.json",
   "ram": "ram/ape-r64k.json",
   "ram_file": "ram0.aperam"
 }
@@ -36,7 +36,7 @@ python main.py --board my_board.json
 ```
 
 ```bash
-python aperam_watchdog.py --board my_board.json
+python ape_watchdog.py --board my_board.json
 ```
 
 Give each board its own `ram_file` if you want to run two at once.

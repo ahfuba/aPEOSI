@@ -13,7 +13,7 @@ python main.py
 In a second window:
 
 ```bash
-python aperam_watchdog.py
+python ape_watchdog.py
 ```
 
 Then in aPEOSI:

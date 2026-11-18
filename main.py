@@ -10,17 +10,18 @@ from devices.internal.A.apeos.system2.sys.mem_mgr import MemoryManager
 from devices.internal.A.apeos.system2.sys.process_mgr import ProcessManager
 from devices.internal.A.apeos.system2.sys.kernel import Kernel
 
-APEOS_VERSION = "alpha-1.2"
+APEOSI_VERSION = "1.2"
+APEOSI_STAGE = "alpha"
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
-parser = argparse.ArgumentParser(description="Boot aPEOS-I.")
+parser = argparse.ArgumentParser(description="Boot aPEOSI.")
 parser.add_argument("--board", default="board.json",
                     help="motherboard file inside /motherboard (default: board.json)")
 parser.add_argument("--fast", action="store_true", help="skip boot delays and the memory test")
 options = parser.parse_args()
 delay = (lambda ms: None) if options.fast else DELAY
 
-print("Booting aPEOS-I System...")
+print("Booting aPEOSI System...")
 delay(1000)
 
 # --- Hardware detection (the "BIOS") --------------------------------------
@@ -44,7 +45,7 @@ except RuntimeError as e:
 print(f"RAM file:    {board.ram_file}")
 
 MEMMGR = MemoryManager(ram, board.ram.page_size, board.ram.num_pages)
-MEMMGR.write_header(APEOS_VERSION, board.ram.name)
+MEMMGR.write_header(f"{APEOSI_VERSION} {APEOSI_STAGE}", board.ram.name)
 if not options.fast:
     print("Memory test... ", end="", flush=True)
     tested = MEMMGR.power_on_self_test()
@@ -66,18 +67,18 @@ delay(500)
 EXEC_TIME = str(f"[{TIME_FULL_DMY()}]")
 print(f"Execution Time according to the base system: {EXEC_TIME}")
 
-print("System boot complete. Welcome to aPEOS-I!")
-print(f"aPEOSI {APEOS_VERSION}, expect bugs. Use at your own risk.")
-print("Tip: run 'python aperam_watchdog.py' in another window to watch the RAM.")
+print("System boot complete. Welcome to aPEOSI!")
+print(f"aPEOSI {APEOSI_VERSION} ({APEOSI_STAGE}), expect bugs. Use at your own risk.")
+print("Tip: run 'python ape_watchdog.py' in another window to watch the RAM.")
 print("\nHanding over to kernel...")
 delay(500)
 
 # Initialize and start the kernel
 try:
-    kernel = Kernel(PROCMGR, MEMMGR, board, APEOS_VERSION, OS_NAME, OS_VERSION)
+    kernel = Kernel(PROCMGR, MEMMGR, board, APEOSI_VERSION, OS_NAME, OS_VERSION)
     kernel.start()
 except RuntimeError as e:
     print(f"FATAL: {e}")
 finally:
     ram.close()
-print("aPEOS-I halted.")
+print("aPEOSI halted.")

@@ -3,9 +3,9 @@
 aPEOSI is turning into an **ecosystem of modules**: simulated hardware parts,
 the OS that runs on them, software that runs on the OS, and tools that watch
 it all. Each part has a clear interface, so anyone can swap it, mod it, or
-build a new one.
+build a new one. Names follow the [naming scheme](NAMING.md).
 
-Legend: ✅ done · 🔨 next · 💡 idea · 🐞 known issue
+Legend: ✅ done · 🔨 current stage · 💡 planned · 🐞 known issue
 
 ---
 
@@ -13,31 +13,47 @@ Legend: ✅ done · 🔨 next · 💡 idea · 🐞 known issue
 
 ```
 ┌──────────────────────────────── TOOLS ────────────────────────────────┐
-│  aPE-RAM Watchdog ✅      aPE-Display 💡      Benchmarks 💡           │
+│  aPE-Watchdog ✅        aPE-Display 💡        Benchmarks 💡            │
 └───────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────── SOFTWARE ───────────────────────────────┐
-│  aPE-BASIC ✅   BananaEditor ✅   counter ✅   machine-code programs 💡│
+│  aPE-BASIC ✅   Banana Editor ✅   aPE-VM 💡   aPE-C 💡   .apx 💡       │
 └───────────────────────────────────────────────────────────────────────┘
-┌──────────────────────────────── aPEOS ────────────────────────────────┐
+┌──────────────────────────────── aPEOSI ───────────────────────────────┐
 │  kernel · scheduler · memory manager · system calls ✅                │
 │  file system on a disk image 💡 · users & permissions 💡              │
 └───────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────── HARDWARE (/motherboard) ──────────────────────┐
-│  RAM .aperam ✅   CPU ✅ (clock only)   GPU 💡   bus devices .apebus 💡│
-│  motherboard / PCI .apemb 💡   cache 💡                                │
+│  aPE-R RAM .aperam ✅   aPE-P CPU ✅ (clock only)   aPE-G GPU 💡       │
+│  aPE-K keyboard .apebus 💡   aPE-B board .apemb 💡   cache 💡           │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ✅ aPEOSI 1.2 (done)
+## The plan: six stages
+
+Each stage builds what the next one needs.
+
+| Stage | Goal | Builds toward |
+|---|---|---|
+| ✅ **0** | aPEOSI 1.2: aPE-RAM, motherboard modules, aPE-Watchdog, aPE-BASIC | everything |
+| 🔨 **1** | Finish 1.x: the first `.apemb`, `.apebus` and `.apegpu` devices, graphics and games | complete 1.x hardware |
+| 💡 **2** | Understand the system: review and document every subsystem | owning the code before it grows |
+| 💡 **3** | A compiled language and **aPE-VM**, a bytecode machine that runs code from aPE-RAM | aPEOSI's first compiler, and a CPU-like target |
+| 💡 **4** | Learn C | designing aPE-C |
+| 💡 **5** | **aPE-C**, compiling to aPE-VM | a systems language for aPEOSI |
+| 💡 **6** | Full hardware simulation: aPE-VM grows into a real CPU with interrupts | a complete simulated computer |
+
+---
+
+## ✅ Stage 0: aPEOSI 1.2 (done)
 
 ### Hardware
 - [x] `/motherboard` folder: `board.json` picks swappable CPU and RAM module files (JSON)
 - [x] Hardware files checked at boot ("BIOS"), with clear errors for bad mods
 - [x] Common 32-byte aPE device header for every hardware file ([spec](docs/aPE-hardware.md))
-- [x] `.aperam` RAM modules: 16K, 64K and 256K included
-- [x] CPU modules: `ape-c1` (200 Hz) and `ape-c0-turtle` (4 Hz)
+- [x] RAM modules aPE-R16K, aPE-R64K, aPE-R256K
+- [x] CPU modules aPE-P1 (200 Hz) and aPE-P0 Turtle (4 Hz)
 
 ### OS
 - [x] RAM is a memory-mapped `.aperam` file that other programs can watch
@@ -53,28 +69,25 @@ Legend: ✅ done · 🔨 next · 💡 idea · 🐞 known issue
 - [x] **aPE-BASIC**: line-numbered BASIC with program, variables and arrays in RAM, `PEEK`/`POKE` ([reference](docs/aPE-BASIC.md))
 - [x] aPE system keywords in BASIC: hardware info (`CPU$`, `RAMSIZE`), process table (`PSLOT`, `PSTATE`), MMU (`FRAME`, `PHYS`), process control (`SPAWN`, `KILL`, `WAIT`, `YIELD`, `SHELL`)
 - [x] Example programs in `A:/basic/`: `hello`, `guess`, `primes`, `bits`, `taskman`, `mmu`
-- [x] BananaEditor keeps its text in RAM
+- [x] Banana Editor keeps its text in RAM
 
-### Tools
-- [x] **aPE-RAM Watchdog**: live frames, bits, hex and process table
-
-### Docs
-- [x] [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md): guided tour of the code
-- [x] [Hardware file formats](docs/aPE-hardware.md)
-- [x] [Modding guide](motherboard/README.md)
+### Tools and docs
+- [x] **aPE-Watchdog**: live frames, bits, hex and process table
+- [x] [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md), [hardware formats](docs/aPE-hardware.md), [modding guide](motherboard/README.md), [naming scheme](NAMING.md)
 
 ---
 
-## 🔨 aPEOSI 1.3: graphics and games
+## 🔨 Stage 1: finish 1.x (devices, graphics, games)
 
-Goal: write simple 1980s-style games in aPE-BASIC.
+Goal: 1980s-style games in aPE-BASIC, on the first real devices.
+Rule: **every device arrives together with the software that uses it.**
 
 ### Hardware
-- [ ] **GPU module**, specs in JSON (e.g. `motherboard/gpu/ape-g1.json`), not in the filename:
-  `width`, `height`, `colors`, `buffers`, `refresh_hz`. Example: 160 × 120, 16 colours, 30 Hz (9.6 KB of VRAM)
-- [ ] GPU registers in the motherboard's PCI configuration space: first use of **`.apemb`**
-- [ ] VRAM as its own memory region the GPU owns
-- [ ] **Keyboard controller** on the I/O bus: first use of **`.apebus`**, for reading keys without Enter
+- [ ] **aPE-B1 board file `board0.apemb`**: a simple device list the OS reads at boot to discover its hardware
+      (the PCI idea, without full PCI detail)
+- [ ] **aPE-G1 GPU** (`motherboard/gpu/ape-g1.json`): `width`, `height`, `colors`, `buffers`, `refresh_hz`.
+      Example: 160 × 120, 16 colours, 30 Hz. Its VRAM and registers live in `gpu0.apegpu`
+- [ ] **aPE-K1 keyboard controller** on the I/O bus (`bus0.apebus`), for reading keys without Enter
 
 ### Software
 - [ ] BASIC graphics: `SCREEN`, `PSET x, y, c`, `LINE`, `COLOR`, `POINT(x, y)`
@@ -84,59 +97,111 @@ Goal: write simple 1980s-style games in aPE-BASIC.
 
 ### Tools
 - [ ] **aPE-Display**: a window that draws VRAM at the GPU's `refresh_hz`
+- [ ] aPE-Watchdog can open any aPE device file, not just RAM
+
+### Cleanup
+- [ ] Fix the [known issues](#-known-issues) below
 
 ---
 
-## 💡 aPEOSI 2.0: a real (simulated) computer
+## 💡 Stage 2: understand the system
 
-Goal: programs become machine code in RAM, run by a virtual CPU.
+Goal: every part of aPEOSI is understood by its maintainer and explained in the docs
+before the system grows further.
 
-### Hardware
-- [ ] **Virtual CPU** that fetches, decodes and executes instructions from aPE-RAM. Choose one:
-  - [ ] **RISC-V RV32I** (recommended): open standard, has user/kernel mode and interrupts, and real C compilers target it
-  - [ ] 6502: the C64/NES CPU, very 80s, but no OS features
+- [ ] Walk through [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md) with aPE-Watchdog open
+- [ ] Trace one context switch, one page fault and one system call end to end
+- [ ] Extend the docs to cover the Stage 1 devices
+- [ ] Fix at least one known issue without AI assistance
+
+---
+
+## 💡 Stage 3: a compiled language and aPE-VM
+
+Goal: aPEOSI's first compiler, plus a machine for it to compile to.
+
+- [ ] **aPE-VM**: a stack-based bytecode virtual machine (instructions like `PUSH 5`, `ADD`, `STORE x`, `JUMP`)
+      that runs bytecode stored in aPE-RAM, one aPEOSI process per program
+- [ ] System calls from bytecode through a `SYSCALL` instruction
+- [ ] `.apx` executable format: an aPE device-style header plus bytecode
+- [ ] A language with a compiler that runs **inside aPEOSI** and produces `.apx` files.
+      Either a new language or aPE-BASIC compiled to bytecode (to be decided)
+- [ ] aPE-Watchdog shows the bytecode, the VM's stack and its program counter in RAM
+
+---
+
+## 💡 Stage 4: learn C
+
+Prerequisite for designing aPE-C: pointers, arrays, structs, the stack, and how C maps to memory.
+
+---
+
+## 💡 Stage 5: aPE-C
+
+Goal: a compiler for a small subset of C, the way HolyC is TempleOS's own C.
+
+- [ ] Compiles to aPE-VM bytecode (`.c` → `.apx`)
+- [ ] Step 1: integers, expressions, `if`, `while`, functions
+- [ ] Step 2: arrays and pointers
+- [ ] Step 3: structs, strings
+
+---
+
+## 💡 Stage 6: full hardware simulation
+
+Goal: programs are machine code in RAM, run by a virtual CPU.
+
+Approach: **Nachos style** (as Berkeley's teaching OS does). The Python kernel
+stays the kernel, running in "kernel mode"; user programs run as machine code
+on the simulated CPU, and a trap instruction hands control to the kernel. This
+needs **no BIOS, no bootloader and no kernel rewrite**: `main.py` already does
+the BIOS's job, and the kernel loads programs straight into memory (like
+`qemu -kernel`).
+
+### CPU
+- [ ] aPE-VM grows into a register CPU. Choose the instruction set:
+  - [ ] **RISC-V RV32I**: open standard, has user/kernel mode and interrupts, and real C compilers target it
+  - [ ] 6502-style: very 80s, but no OS features
   - [ ] An original aPE instruction set
 - [ ] **Timer interrupt** every N cycles → real preemptive multitasking
-- [ ] **Privilege bit**: user vs kernel mode, protected instructions
-- [ ] Context switches save real registers into the PCB (visible in the Watchdog)
+- [ ] **Trap instruction** for system calls; **privilege bit** for protected instructions
+- [ ] Context switches save real registers into the PCB (visible in aPE-Watchdog)
+
+### Timing
 - [ ] **Simulated time**: a cycle counter independent of Python's real speed
 - [ ] RAM modules get `latency_cycles`; CPU modules get cycle costs per instruction
 - [ ] **Cache module**: shows the "memory wall" (a 3 GHz CPU waits about 45 cycles for DRAM)
+
+### Software
+- [ ] **Assembler**: `.aps` source → `.apx` machine code
+- [ ] **Loader**: `exec` an `.apx` file into a new process
+- [ ] aPE-C gets a back end for the new CPU
+- [ ] aPE-BASIC keeps running as built-in "ROM BASIC"
 
 ### Modding levels for CPU modules
 - [ ] **Spec mods (JSON)**: clock, timer interval, cycle costs. Safe to share.
 - [ ] **Core mods (Python class)**: a whole new CPU with `reset()`, `step() → cycles`, `interrupt(n)`.
   ⚠️ This is code that runs on your machine: only install core mods from people you trust.
 
-### Software and tools
-- [ ] **Assembler**: write `MOV`, `ADD`, `JMP` instead of hex
-- [ ] Run C programs compiled with GCC/Clang (if RISC-V)
-- [ ] aPE-BASIC keeps running as built-in "ROM BASIC"
+### Beyond Stage 6 (optional)
+- [ ] OS/161 style: move parts of the kernel onto the virtual CPU, written in aPE-C, with a tiny boot ROM
 
 ---
 
-## 💡 Later
-
-### Languages
-- [ ] **aPE-C**: a compiler for a small subset of C that generates machine code for the aPEOSI 2.0 virtual CPU,
-  the way HolyC is TempleOS's own C. Comes after the virtual CPU exists, and after learning C well enough to
-  design it. Planned order:
-  1. Learn C basics
-  2. aPEOSI 2.0 virtual CPU + assembler
-  3. aPE-C: start with integers, `if`/`while`, functions; add pointers and arrays later
+## Side quests (any stage)
 
 ### OS
-- [ ] Our own **file system** on a disk image file (superblock, FAT or inodes, blocks) instead of host folders
+- [ ] Own **file system** on an aPE-D1 disk image (superblock, FAT or inodes, blocks) instead of host folders
 - [ ] Shell: pipes `|`, redirection `>` `<`, batch scripts, environment variables, quoted arguments
 - [ ] **Users and permissions**: login, file ownership, using the `level` column in `sys_cmd.csv`
 - [ ] Real logging to a file (`logtime`, `logdate`)
 
 ### Software
-- [ ] Full-screen BananaEditor (`curses`)
+- [ ] Full-screen Banana Editor (`curses`)
 - [ ] A GUI (`gui.py` is still empty)
 
 ### Engineering
-- [ ] Package layout, run with `python -m apeosi`
+- [ ] Package layout, run with `python -m apeosi`; rename `sysApp/` and `system2/` to match [NAMING.md](NAMING.md)
 - [ ] `pytest` tests that drive the shell from a script
 - [ ] GitHub Actions CI
 - [ ] **Benchmarks**: measure context-switch, system-call and memory costs, to prove the README's "Python is too heavy" claim
@@ -149,16 +214,18 @@ Goal: programs become machine code in RAM, run by a virtual CPU.
 - [ ] `cd` to another drive (`cd B:/foo`) works out the path against the current drive
 - [ ] `force_dlt` can delete the OS's own files, because drive `A:` is the OS folder
 - [ ] Untested on Windows: Ctrl+C handling, the keyboard thread, the shared RAM file
-- [ ] On Windows, close the Watchdog before booting with a different RAM size
+- [ ] On Windows, close aPE-Watchdog before booting with a different RAM size
 
 ---
 
 ## Making your own module
 
+Name it by the [naming scheme](NAMING.md).
+
 | Module type | What you write | Where | Guide |
 |---|---|---|---|
-| RAM | a JSON spec | `motherboard/ram/` | [modding guide](motherboard/README.md) |
-| CPU | a JSON spec | `motherboard/cpu/` | [modding guide](motherboard/README.md) |
+| RAM | a JSON spec, e.g. `ape-r32k.json` | `motherboard/ram/` | [modding guide](motherboard/README.md) |
+| CPU | a JSON spec, e.g. `ape-p2.json` | `motherboard/cpu/` | [modding guide](motherboard/README.md) |
 | App | a Python class with `run()` that yields system calls | `sysApp/` + a line in `sys_cmd.csv` | [how it works](docs/how-aPEOSI-1.2-works.md) |
 | BASIC program | a `.bas` file | anywhere on a drive | [aPE-BASIC](docs/aPE-BASIC.md) |
-| New hardware class | a class code and header after the common header | `apedev.py` | [formats](docs/aPE-hardware.md) |
+| New hardware class | a class code, a `.ape<class>` extension and a header after the common header | `apedev.py` | [formats](docs/aPE-hardware.md) |

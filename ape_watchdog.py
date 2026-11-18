@@ -1,5 +1,5 @@
 """
-aPE-RAM Watchdog: a live view of aPEOSI's simulated RAM.
+aPE-Watchdog: a live view of aPEOSI's simulated RAM.
 
 This is a separate program. It maps the same .aperam file as aPEOSI
 (read-only) and redraws it 20 times per second, so you can watch the OS
@@ -7,9 +7,9 @@ switch bits as it runs: context switches in the header, PCBs changing in the
 process table, page tables filling in, and your typing landing in a page.
 
 Usage:
-    python aperam_watchdog.py                   # RAM of motherboard/board.json
-    python aperam_watchdog.py --board my.json   # RAM of another board
-    python aperam_watchdog.py path/to/ram0.aperam
+    python ape_watchdog.py                   # RAM of motherboard/board.json
+    python ape_watchdog.py --board my.json   # RAM of another board
+    python ape_watchdog.py path/to/ram0.aperam
 
 Start it before or after aPEOSI; it waits for the RAM file and follows reboots.
 """
@@ -121,7 +121,7 @@ class Watchdog:
         self.writes_per_sec = 0.0
         self.hex_cache = None
 
-        root.title("aPE-RAM Watchdog")
+        root.title("aPE-Watchdog")
         root.configure(bg=BG)
         self._build_ui()
         self.poll()
@@ -297,7 +297,7 @@ class Watchdog:
             (f"PID {p['pid']} {p['name']}" for p in pcbs.values() if p["pid"] == cur), f"PID {cur}")
         self.status.configure(text=(
             f"{header['ram_name']}  {layout.size:,} bytes = {layout.num_pages} x {ps}   "
-            f"aPEOS {header['os_version']}   tick {header['tick']:,}   "
+            f"aPEOSI {header['os_version']}   tick {header['tick']:,}   "
             f"writes {seq:,} ({self.writes_per_sec:,.0f}/s)   CPU: {running}"))
         kb = layout.kbd_page * ps
         kb_len = min(int.from_bytes(data[kb:kb + 2], "little"), ps - 2)

@@ -10,6 +10,7 @@ what it is.
 | `.aperam` | RAM module (SODIMM) | `RAM\0` | implemented in 1.2 |
 | `.apemb` | Motherboard / PCI configuration space | `MB\0\0` | reserved |
 | `.apebus` | Bus devices (I/O ports, timers, keyboard controller, ...) | `BUS\0` | reserved |
+| `.apegpu` | GPU: VRAM and display registers | `GPU\0` | reserved |
 
 All numbers are little-endian. Code: `devices/internal/A/apeos/system2/sys/apedev.py`.
 
@@ -114,5 +115,11 @@ sitting on a bus. Each device exposes a few registers; writing a register
 makes the device do something, and devices can raise interrupts. Class code
 `BUS\0`.
 
+## `.apegpu`: GPU (reserved)
+
+Planned: the GPU's VRAM (the framebuffer) plus a few display registers.
+The GPU card itself is listed in the motherboard's `.apemb`; its memory is
+its own file, e.g. `gpu0.apegpu`. aPE-Display draws it. Class code `GPU\0`.
+
 To add a new class, pick a 4-byte class code, write the class header after
-the common header, and register the extension in `apedev.py`.
+the common header, and register the extension in `apedev.py`. Naming rules are in [`NAMING.md`](../NAMING.md).

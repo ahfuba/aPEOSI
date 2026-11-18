@@ -1,6 +1,6 @@
 {
-  "name": "aPE-Board Classic",
-  "cpu": "cpu/ape-c1.json",
+  "name": "aPE-B1 Classic",
+  "cpu": "cpu/ape-p1.json",
   "ram": "ram/ape-r16k.json",
   "ram_file": "ram0.aperam"
 }

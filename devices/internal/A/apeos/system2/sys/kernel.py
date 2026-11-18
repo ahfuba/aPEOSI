@@ -80,9 +80,9 @@ class Kernel:
             return foreground_process.prompt
 
         full_path = self.fs_manager.get_full_current_path()
-        if full_path.endswith('/') and len(full_path) > 1:
-            full_path = full_path[:-1]
-        return f"aPEOS_{self.apeos_version} {full_path}> "
+        if full_path.endswith('/') and not full_path.endswith(':/'):
+            full_path = full_path[:-1]  # keep the slash only at a drive's root
+        return f"aPEOSI {self.apeos_version} {full_path}> "
 
     def _wants_input(self):
         fg = self.proc_manager.get_foreground_process()

@@ -4,7 +4,7 @@ aPE-RAM: the simulated physical memory of aPEOSI.
 The RAM is a plain file (``*.aperam``) that is memory-mapped with ``mmap``.
 Memory-mapping makes the operating system share the same physical pages
 between every program that maps the file, so when aPEOSI writes a byte,
-the aPE-RAM Watchdog (a completely separate program) sees that byte change
+the aPE-Watchdog (a completely separate program) sees that byte change
 immediately. This is real shared memory, not a copy.
 
 This module only knows the *format* of the RAM: where things are and how to
@@ -185,7 +185,7 @@ class PhysicalRAM:
                 os.remove(tmp)
                 raise RuntimeError(
                     f"Cannot resize {self.path}: it is in use. "
-                    "Close the aPE-RAM Watchdog and boot again.")
+                    "Close the aPE-Watchdog and boot again.")
         self._file = open(self.path, "r+b")
         self._mm = mmap.mmap(self._file.fileno(), self.size, access=mmap.ACCESS_WRITE)
 

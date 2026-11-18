@@ -5,7 +5,7 @@ class Counter:
     """
     A 32-bit binary ripple counter that lives in this process's aPE-RAM.
 
-    Open the aPE-RAM Watchdog, click this process's user page, and watch the
+    Open the aPE-Watchdog, click this process's user page, and watch the
     bits count up exactly like a chain of T flip-flops: the rightmost bit
     toggles every step, the next one every 2 steps, the next every 4, ...
 

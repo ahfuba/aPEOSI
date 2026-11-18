@@ -3,7 +3,7 @@ from devices.internal.A.apeos.system2.sys.process_mgr import ReadLine
 
 class BananaEditor:
     """
-    A simple, line-based text editor for aPEOS-I.
+    A simple, line-based text editor for aPEOSI.
     Inspired by classic terminal editors like ed and nano.
 
     The text buffer is NOT a Python list: it lives in this process's memory
@@ -84,7 +84,7 @@ class BananaEditor:
 
         print("\n--- Banana Editor ---")
         print("Type lines of text.  :p print buffer  :w save  :wq save and quit  :q quit")
-        print(f"Your text lives in RAM: try 'peek {self.pid} 0' or the aPE-RAM Watchdog.")
+        print(f"Your text lives in RAM: try 'peek {self.pid} 0' or the aPE-Watchdog.")
         print("---------------------\n")
 
         while True:

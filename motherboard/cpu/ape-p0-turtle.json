@@ -1,6 +1,6 @@
 {
   "type": "cpu",
-  "name": "aPE-C0 Turtle",
+  "name": "aPE-P0 Turtle",
   "clock_hz": 4,
   "description": "Very slow CPU, 4 scheduler rounds per second. Good for watching every context switch in the Watchdog."
 }
