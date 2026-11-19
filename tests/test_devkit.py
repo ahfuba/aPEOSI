@@ -20,7 +20,7 @@ from devices.internal.A.apeos.system2.sys.apedev import (COMMON_SIZE, parse_comm
 
 
 def sample_device():
-    dev = Device("BUS", "aPE-L1 Panel", version=3, description="8 LEDs and a button")
+    dev = Device("BUS", "aPE-L1 Panel", function="PANEL", version=3, description="8 LEDs and a button")
     dev.param("leds", 8).param("ratio", 0.5).param("label", "front").param("dimmable", True)
     dev.region("io", size=16, kind="registers", description="control")
     dev.region("pattern", size=64, kind="buffer", align=64)
@@ -47,7 +47,8 @@ class TestBuildAndRead(unittest.TestCase):
         path = sample_device().build(directory=self.dir)
         self.assertEqual(os.path.basename(path), "ape-l1-panel.apebus")  # NAMING.md file name
         d = load(path).desc
-        self.assertEqual((d.model, d.version, d.description), ("aPE-L1 Panel", 3, "8 LEDs and a button"))
+        self.assertEqual((d.model, d.version, d.description, d.function),
+                         ("aPE-L1 Panel", 3, "8 LEDs and a button", "PANEL"))
         self.assertEqual(d.params, {"leds": 8, "ratio": 0.5, "label": "front", "dimmable": True})
         self.assertEqual([(r.name, r.offset, r.size, r.kind) for r in d.regions],
                          [("io", 0, 16, "registers"), ("pattern", 64, 64, "buffer")])
@@ -81,7 +82,7 @@ class TestBuildAndRead(unittest.TestCase):
         self.assertEqual(image[d.address("pattern", 4):d.address("pattern", 8)], b"\x01\x02\x04\x08")
 
     def test_disks_are_never_overwritten(self):
-        disk = Device("DISK", "aPE-D1").region("blocks", size=4096)
+        disk = Device("DISK", "aPE-D1", function="DISK").region("blocks", size=4096)
         path = os.path.join(self.dir, "disk0.apedisk")
         disk.instantiate(path)
         with open(path, "r+b") as f:  # "save a file" on the disk
@@ -107,7 +108,7 @@ class TestBuildAndRead(unittest.TestCase):
 
     def test_wrong_extension_is_refused(self):
         with self.assertRaises(DevKitError):
-            sample_device().build(os.path.join(self.dir, "panel.apegpu"))
+            sample_device().build(os.path.join(self.dir, "panel.apepci"))
 
 
 class TestValidation(unittest.TestCase):
@@ -118,14 +119,14 @@ class TestValidation(unittest.TestCase):
         self.assertEqual(sample_device().validate(), ([], []))
 
     def test_overlaps(self):
-        dev = Device("GPU", "aPE-G9").region("a", size=8, offset=0).region("b", size=8, offset=4)
+        dev = Device("PCI", "aPE-G9", function="GPU").region("a", size=8, offset=0).region("b", size=8, offset=4)
         self.assertTrue(any("overlap" in e for e in self.errors(dev)))
-        dev = Device("GPU", "aPE-G9").region("r", size=8, kind="registers")
+        dev = Device("PCI", "aPE-G9", function="GPU").region("r", size=8, kind="registers")
         dev.register("X", "r", 0, width=16).register("Y", "r", 1)
         self.assertTrue(any("overlap" in e for e in self.errors(dev)))
 
     def test_register_rules(self):
-        dev = Device("GPU", "aPE-G9").region("r", size=4, kind="registers")
+        dev = Device("PCI", "aPE-G9", function="GPU").region("r", size=4, kind="registers")
         dev.register("WIDTH", "r", 0, width=12)
         dev.register("ALIGN", "r", 1, width=16)
         dev.register("RESET", "r", 0, width=8, reset=256)
@@ -136,22 +137,24 @@ class TestValidation(unittest.TestCase):
             self.assertIn(word, text)
 
     def test_fields(self):
-        dev = Device("GPU", "aPE-G9").region("r", size=4, kind="registers")
+        dev = Device("PCI", "aPE-G9", function="GPU").region("r", size=4, kind="registers")
         dev.register("R", "r", 0, fields=[Field("A", 0, 4), Field("B", 2, 2), Field("C", 7, 2)])
         text = "\n".join(self.errors(dev))
         self.assertIn("overlaps another field", text)
         self.assertIn("outside the 8-bit register", text)
 
     def test_naming_warnings(self):
-        _, warnings = Device("GPU", "aPE-X1").region("v", size=4).validate()
+        _, warnings = Device("PCI", "aPE-X1", function="GPU").region("v", size=4).validate()
         self.assertTrue(any("letter G" in w for w in warnings))
+        _, warnings = Device("PCI", "aPE-G2").validate()
+        self.assertTrue(any("no function" in w for w in warnings))
         _, warnings = Device("CPU", "my cpu").validate()
         self.assertTrue(any("NAMING.md" in w for w in warnings))
-        self.assertTrue(self.errors(Device("GPU", "aPE-G1 Much Too Long Name")))
+        self.assertTrue(self.errors(Device("PCI", "aPE-G1 Much Too Long Name", function="GPU")))
         self.assertTrue(self.errors(Device("TOASTER", "aPE-T1")))
 
     def test_errors_stop_compile(self):
-        dev = Device("GPU", "aPE-G9").region("a", size=0)
+        dev = Device("PCI", "aPE-G9", function="GPU").region("a", size=0)
         with self.assertRaises(DevKitError) as ctx:
             dev.compile()
         self.assertTrue(ctx.exception.errors)

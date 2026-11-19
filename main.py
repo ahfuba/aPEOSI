@@ -9,6 +9,7 @@ from devices.internal.A.apeos.system2.sys.aperam import PhysicalRAM
 from devices.internal.A.apeos.system2.sys.mem_mgr import MemoryManager
 from devices.internal.A.apeos.system2.sys.process_mgr import ProcessManager
 from devices.internal.A.apeos.system2.sys.kernel import Kernel
+from devices.internal.A.apeos.system2.sys.board import Motherboard, SocketError
 
 APEOSI_VERSION = "1.2"
 APEOSI_STAGE = "alpha"
@@ -52,6 +53,22 @@ if not options.fast:
     print(f"{tested:,} bytes OK")
 MEMMGR.format()
 
+# --- Sockets: plug every device in (the BIOS's "enumeration") ----------------------
+MOTHERBOARD = Motherboard(board, os.path.dirname(board.ram_file))
+try:
+    devices = MOTHERBOARD.power_on()
+except SocketError as e:
+    print(f"BIOS: {e}")
+    MOTHERBOARD.close()
+    MOTHERBOARD.close()
+    ram.close()
+    sys.exit(1)
+if devices:
+    print("Sockets:")
+    for line in devices:
+        print(f"  {line}")
+delay(300)
+
 PROCMGR = ProcessManager(MEMMGR)
 print("Process Manager initialized.")
 delay(300)
@@ -75,10 +92,11 @@ delay(500)
 
 # Initialize and start the kernel
 try:
-    kernel = Kernel(PROCMGR, MEMMGR, board, APEOSI_VERSION, OS_NAME, OS_VERSION)
+    kernel = Kernel(PROCMGR, MEMMGR, board, APEOSI_VERSION, OS_NAME, OS_VERSION, MOTHERBOARD)
     kernel.start()
 except RuntimeError as e:
     print(f"FATAL: {e}")
 finally:
+    MOTHERBOARD.close()
     ram.close()
 print("aPEOSI halted.")

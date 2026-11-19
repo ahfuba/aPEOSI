@@ -1,12 +1,13 @@
 """
 aPE-DevKit command-line tool: build, check and inspect aPE device files.
 
-    python ape_devkit.py new GPU "aPE-G9"          start a new device source file
+    python ape_devkit.py new PCI "aPE-G9" --function GPU   start a new device source file
     python ape_devkit.py check my_device.py        validate without writing anything
     python ape_devkit.py build my_device.py        compile to a .ape<class> module
     python ape_devkit.py build motherboard/cpu/ape-p1.json
-    python ape_devkit.py info ape-g9.apegpu        show what a device file contains
-    python ape_devkit.py instance ape-g9.apegpu gpu0.apegpu   power one on
+    python ape_devkit.py info ape-g9.apepci        show what a device file contains
+    python ape_devkit.py info --watch motherboard/bus0.apebus   live view while aPEOSI runs
+    python ape_devkit.py instance ape-g9.apepci pci0.apepci   power one on
 
 A Python device source is a normal Python file that creates a Device and
 stores it in a variable called DEVICE. Building it runs that file, so only
@@ -18,6 +19,7 @@ Guide: docs/aPE-DevKit.md
 
 import argparse
 import os
+import time
 import runpy
 import struct
 import sys
@@ -66,7 +68,7 @@ def cmd_check(args):
     if errors:
         print(f"{args.source}: {len(errors)} error(s)")
         return 1
-    print(f"{args.source}: OK. {d.model} ({class_name(d.device_class)}), {len(d.params)} params, "
+    print(f"{args.source}: OK. {d.model} ({d.function or '?'}, {class_name(d.device_class)} socket), {len(d.params)} params, "
           f"{len(d.regions)} regions, {len(d.registers)} registers, {d.data_size:,}-byte data area")
     return 0
 
@@ -82,7 +84,7 @@ def cmd_build(args):
     path = device.build(args.output, directory)
     d = device.desc
     print(f"built {path}")
-    print(f"  {d.model} ({class_name(d.device_class)}), {len(d.params)} params, {len(d.regions)} regions, "
+    print(f"  {d.model} ({d.function or '?'}, {class_name(d.device_class)} socket), {len(d.params)} params, {len(d.regions)} regions, "
           f"{len(d.registers)} registers")
     print(f"  module {os.path.getsize(path):,} bytes; an instance will be {d.instance_size:,} bytes")
     return 0
@@ -94,9 +96,23 @@ def _flags(common):
 
 
 def cmd_info(args):
+    if not args.watch:
+        return show_info(args)
+    try:
+        while True:
+            print("\033[2J\033[H", end="")            # clear the screen
+            show_info(args)
+            print("\n(watching: Ctrl+C to stop)")
+            time.sleep(0.25)
+    except KeyboardInterrupt:
+        print()
+        return 0
+
+
+def show_info(args):
     common, desc = read_device_header(args.file)
     print(f"{args.file}")
-    print(f"  class    {class_name(common['device_class'])} ({EXTENSIONS.get(common['device_class'], '?')})")
+    print(f"  socket   {class_name(common['device_class'])} ({EXTENSIONS.get(common['device_class'], '?')})")
     print(f"  name     {common['name']}")
     print(f"  kind     {_flags(common)}")
     print(f"  format   v{common['format_version']}, header {common['header_size']:,} bytes, "
@@ -116,6 +132,8 @@ def cmd_info(args):
     if not common["is_module"]:
         with open(args.file, "rb") as f:
             live = f.read()
+    if desc.function:
+        print(f"  function {desc.function}")
     if desc.description:
         print(f"  about    {desc.description}")
     print(f"  version  {desc.version}")
@@ -158,12 +176,15 @@ def cmd_instance(args):
 
 TEMPLATE = '''"""
 {model}: describe your device here.
-Build it with:  python ape_devkit.py build {source}
+
+Check it:  python ape_devkit.py check {source}
+Plug it into a "{lower}" socket in motherboard/board.json to run its LOGIC in aPEOSI.
 """
 
-from apedk import Device, Field
+from apedk import Device, DeviceLogic, Field
 
-DEVICE = Device("{cls}", "{model}", version=1, description="what this device does")
+DEVICE = Device("{cls}", "{model}", function="{function}", version=1,
+                description="what this device does")
 
 # Fixed properties of the device
 DEVICE.param("example_hz", 60)
@@ -178,13 +199,36 @@ DEVICE.register("CTRL", "regs", offset=0x0, width=8, reset=0x00, description="co
     Field("MODE", lsb=1, width=2, description="operating mode"),
 ])
 DEVICE.register("STATUS", "regs", offset=0x1, width=8, access="r", description="status flags")
+
+# The clock that drives tick(); 0 = no clock
+DEVICE.param("clock_hz", 1000)
+
+
+class LOGIC(DeviceLogic):
+    """What the device does. Remove a hook you don't need."""
+
+    def reset(self):
+        pass                                    # power-on
+
+    def write(self, name, value):
+        super().write(name, value)              # stores it (read-only registers are ignored)
+        # react to the OS here, e.g. start something when CTRL.ENABLE turns on
+
+    def read(self, name):
+        return self.reg(name)                   # side effects go here (e.g. pop a FIFO)
+
+    def tick(self):
+        pass                                    # one tick of clock_hz: advance your state machine
+
+    def on_serial(self, byte):
+        pass                                    # a byte arrived on a serial line (SER devices, UARTs)
 '''
 
 
 def cmd_new(args):
-    code = class_code(args.device_class)
+    code = class_code(args.socket)
     if code is None:
-        print(f"unknown device class '{args.device_class}' (known: "
+        print(f"unknown socket type '{args.socket}' (known: "
               + ", ".join(class_name(c) for c in EXTENSIONS) + ")")
         return 1
     path = args.output or model_file_name(args.model, ".py")
@@ -192,7 +236,8 @@ def cmd_new(args):
         print(f"{path} already exists; not overwriting it")
         return 1
     with open(path, "w", encoding="utf-8") as f:
-        f.write(TEMPLATE.format(model=args.model, cls=class_name(code), source=os.path.basename(path)))
+        f.write(TEMPLATE.format(model=args.model, cls=class_name(code), lower=class_name(code).lower(),
+                                function=(args.function or "MYDEVICE").upper(), source=os.path.basename(path)))
     print(f"created {path}; edit it, then: python ape_devkit.py build {path}")
     return 0
 
@@ -202,8 +247,9 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("new", help="create a new Python device source from a template")
-    p.add_argument("device_class", help="RAM, MB, BUS, GPU, CPU, DISK or NET")
+    p.add_argument("socket", help="the socket it plugs into: BUS, PCI, SER, USB, RAM, CPU, MB")
     p.add_argument("model", help='model name, e.g. "aPE-G9"')
+    p.add_argument("-f", "--function", help="what it does, e.g. GPU, TIMER, SOUND")
     p.add_argument("-o", "--output", help="source file to create")
     p.set_defaults(func=cmd_new)
 
@@ -219,11 +265,12 @@ def main(argv=None):
 
     p = sub.add_parser("info", help="show what an aPE device file contains")
     p.add_argument("file")
+    p.add_argument("-w", "--watch", action="store_true", help="keep refreshing (live view of a running device)")
     p.set_defaults(func=cmd_info)
 
     p = sub.add_parser("instance", help="create a powered-on instance from a module or source")
     p.add_argument("module")
-    p.add_argument("output", help="e.g. gpu0.apegpu")
+    p.add_argument("output", help="e.g. pci0.apepci")
     p.add_argument("--overwrite", action="store_true", help="allow replacing an existing disk")
     p.set_defaults(func=cmd_instance)
 

@@ -5,15 +5,20 @@ share one **common device header**, followed by a header for that **device
 class**. A tool can read the first 32 bytes of any aPE device file and know
 what it is.
 
-| Extension | Device class | Class code | Lifetime | Status |
+The class code says which **socket** a device plugs into ([aPE Socket spec](aPE-Socket.md));
+what the device does is its **function**, stored in its descriptor.
+
+| Extension | Socket / medium | Class code | Lifetime | Status |
 |---|---|---|---|---|
-| `.aperam` | RAM module (SODIMM) | `RAM\0` | volatile | implemented in 1.2 |
-| `.apemb` | Motherboard: the device list | `MB\0\0` | rebuilt at boot | reserved |
-| `.apebus` | Bus devices (keyboard controller, sound chip, timers, ...) | `BUS\0` | volatile | reserved |
-| `.apegpu` | GPU: VRAM, display registers, later shader cores | `GPU\0` | volatile | reserved |
-| `.apecpu` | CPU: registers, flags, cycle counter, cache | `CPU\0` | volatile | reserved |
-| `.apedisk` | Disk: persistent file storage | `DISK` | **persistent** | reserved |
-| `.apenet` | Network card, or a shared network medium | `NET\0` | volatile | reserved |
+| `.apecpu` | CPU socket | `CPU\0` | volatile | spec: Stage 6 |
+| `.aperam` | memory slot (SODIMM) | `RAM\0` | volatile | implemented |
+| `.apemb` | the motherboard: socket table, interrupt controller | `MB\0\0` | volatile | implemented |
+| `.apebus` | on-board system bus (timer, UART, ...) | `BUS\0` | volatile | implemented |
+| `.apepci` | PCI expansion slot (GPU, sound, disk controller cards) | `PCI\0` | volatile | implemented, no cards yet |
+| `.apeser` | serial port (byte-stream devices) | `SER\0` | volatile | implemented |
+| `.apeusb` | USB port | `USB\0` | volatile | spec only |
+| `.apedisk` | storage medium | `DISK` | **persistent** | reserved |
+| `.apenet` | network medium (cable or "air") | `NET\0` | volatile | reserved |
 
 The extension is always `.ape` + the class code in lowercase. Naming rules,
 including module vs instance files, are in [`NAMING.md`](../NAMING.md).
@@ -51,7 +56,7 @@ Each chunk is `tag (4 bytes)`, `length (u32)`, the payload, then padding to
 
 | Tag | Payload |
 |---|---|
-| `INFO` | model (string), description (string), device version (u16) |
+| `INFO` | model (string), description (string), device version (u16), function (string) |
 | `PARM` | count (u16), then per parameter: name (string), type (u8: 0 int, 1 float, 2 string, 3 bool), value (i64 / f64 / string / u8) |
 | `RGNS` | count (u16), then per region: name, offset (u32), size (u32), kind (u8), access (u8), description |
 | `REGS` | count (u16), then per register: name, region index (u16), offset (u32), width in bits (u8), access (u8), reset (u32), description, field count (u8), then per field: name, lsb (u8), width (u8), description |
@@ -139,43 +144,54 @@ Reading one is a page fault and the process is terminated.
 
 `u16 length` followed by the last line typed into aPEOSI (UTF-8).
 
-## Reserved classes
+## Socket files
 
-These formats are planned; their exact layouts are designed when the first
-software that uses them is built.
+How each socket uses its file. Behaviour and protocols are in the
+[aPE Socket spec](aPE-Socket.md).
 
-### `.apemb`: motherboard (reserved)
+### `.apemb`: the motherboard (`board0.apemb`)
 
-The device list the OS reads at boot to discover its hardware: which GPU,
-bus devices, disks and network cards are plugged in, and which file each one
-lives in. It plays the role of PCI enumeration, without the full PCI detail.
-The motherboard *lists* devices; each device keeps its own state in its own file.
+Built at boot from `board.json`. Its descriptor has three regions:
 
-### `.apebus`: bus devices (reserved)
+- `ic`: the interrupt controller: `IRQ_LINES` (u16, current level of every line) and `IRQ_MASK` (u16, 1 = disabled)
+- `irq_counts`: interrupts delivered per IRQ line (16 × u32)
+- `sockets`: the socket table, 32 bytes per socket: id (8), class code (4), I/O base (u16),
+  I/O size (u16), IRQ (u8, `0xFF` = none), present (u8), model (14)
 
-A container for small memory-mapped I/O devices. Each device on the bus gets
-its own region of registers (and buffers), plus a way to raise interrupts:
+### `.apebus`, `.apepci`: register sockets (`bus0.apebus`, `pci0.apepci`)
 
-- **aPE-K1 keyboard controller**: key codes and a "key waiting" flag, for reading keys without Enter
-- **aPE-S1 sound chip**: control registers plus a sample buffer the OS must refill before it runs dry
+A descriptor followed by the device's data area: its registers and buffers,
+reachable from the OS through the device's I/O window. Implemented devices:
+**aPE-T1 Timer** and **aPE-U1 UART** on the system bus. Planned cards:
 
-### `.apegpu`: GPU (reserved)
+- **aPE-G1 GPU**: VRAM (the framebuffer) plus display registers; aPE-Display draws it at `refresh_hz`.
+  **aPE-G2** adds shader cores, each with its own registers and program counter in its own region.
+- **aPE-S1 sound**: control registers plus a sample buffer the OS refills before it runs dry.
+- **aPE-N1 network card**: send and receive buffers, its address and link state, using an `.apenet` medium.
 
-- **aPE-G1**: VRAM (the framebuffer) plus display registers. aPE-Display draws it at the GPU's `refresh_hz`.
-- **aPE-G2**: adds shader cores. Each core has its own registers and program
-  counter in its own region and runs aPE-VM bytecode on its own pixel, so the
-  Watchdog can show every core working.
+### `.apeser`: serial devices (`com1.apeser`)
 
-### `.apecpu`: CPU (reserved)
+A descriptor plus the device's own registers. Serial devices have no I/O
+window: they exchange bytes with the UART that drives their port.
+Implemented: **aPE-E1 Echo**, a loopback plug.
+
+### `.apeusb`: USB devices (spec only)
+
+USB devices will plug into the ports of a USB host-controller card. Planned
+first device: **aPE-K1**, a USB keyboard.
+
+### `.apecpu`: CPU (Stage 6)
 
 The CPU's state once aPEOSI has a virtual CPU: general registers, program
 counter, flags, privilege bit, interrupt state, the cycle counter, and the
 cache as its own region.
 
-### `.apedisk`: disk (reserved)
+## Media files
+
+### `.apedisk`: storage (reserved)
 
 A whole disk in one file: a superblock, a file table (FAT or inodes) and data
-blocks. Unlike every other device file, a disk is **persistent**:
+blocks. Unlike device files, a disk is **persistent**:
 
 - deleting the file deletes the data on it; copying the file is a complete backup
 - aPEOSI never creates or overwrites a disk file at boot; a separate format tool makes new disks
@@ -183,12 +199,12 @@ blocks. Unlike every other device file, a disk is **persistent**:
 
 ### `.apenet`: network (reserved)
 
-- **`net0.apenet`**: a network card (aPE-N1): send and receive buffers, its address and link state.
-- **`air0.apenet`**: a shared medium. Two aPEOSI computers whose cards point at the same
-  medium file can exchange packets. The medium can add noise, drop packets and
-  produce collisions, so retransmission and collision handling can be observed.
+A shared medium, e.g. `air0.apenet`. Two aPEOSI computers whose network cards
+point at the same medium file can exchange packets. The medium can add noise,
+drop packets and produce collisions, so retransmission and collision handling
+can be observed.
 
 ## Adding a class
 
-Pick a class code of up to 4 letters, write the class header after the common
-header, and register the extension in `apedev.py`. Naming rules are in [`NAMING.md`](../NAMING.md).
+Pick a class code of up to 4 letters for the new socket or medium, register its
+extension in `apedev.py`, and describe its protocol in the [socket spec](aPE-Socket.md). Naming rules are in [`NAMING.md`](../NAMING.md).

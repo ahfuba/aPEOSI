@@ -24,9 +24,9 @@ Legend: ✅ done · 🔨 current stage · 💡 planned · 🐞 known issue
 │  file system on a disk image 💡 · users & permissions 💡              │
 └───────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────── HARDWARE (/motherboard) ──────────────────────┐
-│  RAM .aperam ✅   CPU ✅ clock only (.apecpu 💡)   board .apemb 💡     │
-│  GPU .apegpu 💡   bus .apebus 💡 (keyboard, sound)   disk .apedisk 💡   │
-│  network .apenet 💡   cache 💡                                          │
+│  RAM .aperam ✅   CPU ✅ clock only (.apecpu 💡)   board .apemb ✅     │
+│  bus .apebus ✅   PCI .apepci ✅   serial .apeser ✅   USB .apeusb 💡   │
+│  media: disk .apedisk 💡  network .apenet 💡   cache 💡                 │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,7 +39,7 @@ Each stage builds what the next one needs.
 | Stage | Goal | Builds toward |
 |---|---|---|
 | ✅ **0** | aPEOSI 1.2: aPE-RAM, motherboard modules, aPE-Watchdog, aPE-BASIC | everything |
-| 🔨 **1** | Finish 1.x: the first `.apemb`, `.apebus` and `.apegpu` devices, graphics and games | complete 1.x hardware |
+| 🔨 **1** | Finish 1.x: sockets and devices with logic, then graphics and games | complete 1.x hardware |
 | 💡 **2** | Understand the system: review and document every subsystem | owning the code before it grows |
 | 💡 **3** | A compiled language and **aPE-VM**, a bytecode machine that runs code from aPE-RAM | aPEOSI's first compiler, and a CPU-like target |
 | 💡 **4** | Learn C | designing aPE-C |
@@ -94,12 +94,24 @@ Rule: **every device arrives together with the software that uses it.**
 - [x] aPEOSI boots from compiled CPU and RAM modules as well as JSON specs
 - [x] [Guide](docs/aPE-DevKit.md), example device (`docs/examples/ape-l1-panel`), and tests (`python -m unittest discover tests`)
 
+### Sockets ([spec](docs/aPE-Socket.md))
+- [x] Socket types: CPU, memory slot, motherboard, on-board system bus, PCI slots, serial ports, USB (spec only).
+      **The extension names the socket**; the device's function is stored inside the file
+- [x] Media separate from devices: `.apedisk` (persistent) and `.apenet`
+- [x] Motherboard runtime: enumeration at boot, I/O port windows, level-triggered IRQs with an
+      interrupt controller in `board0.apemb`, device clocks, serial links, faulted devices isolated
+- [x] Device logic: `LOGIC` classes with `reset`/`read`/`write`/`tick`/`on_serial` hooks; device files
+      *are* the live devices (`bus0.apebus`, `com1.apeser`)
+- [x] First devices: **aPE-T1 Timer** (interrupts), **aPE-U1 UART** (baud-timed serial), **aPE-E1 Echo** (serial loopback plug)
+- [x] Kernel: interrupt dispatch to drivers by function, a timer driver, masking of unhandled IRQs
+- [x] `lsdev`; BASIC `INP`, `OUT`, `IOBASE`, `IRQCOUNT`; `timer.bas`, `serial.bas`
+- [x] `ape_devkit.py info --watch`: live view of any device file
+- [ ] USB: a host-controller PCI card and the **aPE-K1 USB keyboard**, for reading keys without Enter
+- [ ] PCI DMA: cards reading and writing RAM within limits the OS grants
+
 ### Hardware
-- [ ] **aPE-B1 board file `board0.apemb`**: a simple device list the OS reads at boot to discover its hardware
-      (the PCI idea, without full PCI detail)
-- [ ] **aPE-G1 GPU** (`motherboard/gpu/ape-g1.json`): `width`, `height`, `colors`, `buffers`, `refresh_hz`.
-      Example: 160 × 120, 16 colours, 30 Hz. Its VRAM and registers live in `gpu0.apegpu`
-- [ ] **aPE-K1 keyboard controller** on the I/O bus (`bus0.apebus`), for reading keys without Enter
+- [ ] **aPE-G1 GPU** card in a PCI slot (`pci0.apepci`): `width`, `height`, `colors`, `buffers`, `refresh_hz`.
+      Example: 160 × 120, 16 colours, 30 Hz; VRAM and display registers in the card's file
 
 ### Software
 - [ ] BASIC graphics: `SCREEN`, `PSET x, y, c`, `LINE`, `COLOR`, `POINT(x, y)`
@@ -210,10 +222,10 @@ Devices that turn course topics into experiments. Each arrives with programs tha
 and with something to observe in aPE-Watchdog.
 
 - [ ] **aPE-G2 GPU with shader cores**: N cores, each with its own registers and program counter in
-      `gpu0.apegpu`, all running the same aPE-VM shader on different pixels. Watch the image being drawn core by core
-- [ ] **aPE-S1 sound chip** (bus device in `bus0.apebus`): sample buffer + DAC registers.
+      the card's file (`pci0.apepci`), all running the same aPE-VM shader on different pixels. Watch the image being drawn core by core
+- [ ] **aPE-S1 sound card** (PCI): sample buffer + DAC registers.
       Topics: sampling, the Nyquist rate, quantization, buffer underruns, interrupts
-- [ ] **aPE-N1 network card** (`net0.apenet`) and a **shared medium** (`air0.apenet`):
+- [ ] **aPE-N1 network card** (PCI) and a **shared medium** (`air0.apenet`):
       two aPEOSI computers exchange packets through one file. The medium can add noise, drop packets
       and cause collisions. Topics: packets, MAC addresses, collisions, retransmission
 

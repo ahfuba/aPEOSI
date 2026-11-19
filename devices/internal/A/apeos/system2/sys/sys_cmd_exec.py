@@ -72,6 +72,32 @@ def _cmd_mem(args, kernel, io_manager):
     for start in range(0, len(symbols), 64):
         print(f"  0x{start:02X}  {''.join(symbols[start:start + 64])}")
 
+def _cmd_lsdev(args, kernel, io_manager):
+    """Lists the motherboard's sockets and what is plugged into them."""
+    from .apedev import class_name
+    mb = kernel.motherboard
+    if mb is None or not mb.sockets:
+        print("This motherboard has no sockets.")
+        return
+    print(f"Motherboard: {kernel.board.name}")
+    print(f"  {'SOCKET':<7}{'TYPE':<5}{'DEVICE':<15}{'FUNCTION':<10}{'I/O PORTS':<14}{'IRQ':<5}{'INTERRUPTS':>10}")
+    for sock in mb.sockets:
+        model = sock.desc.model if sock.desc else "(empty)"
+        ports = (f"{sock.io_base:04X}-{sock.io_base + sock.io_size - 1:04X}"
+                 if sock.io_base is not None else "-")
+        irq = "-" if sock.irq is None else str(sock.irq)
+        count = "-" if sock.irq is None else f"{mb.irq_counts[sock.irq]:,}"
+        note = ""
+        if sock.controller:
+            note = f"  via {sock.controller}"
+        if sock.irq is not None and mb.irq_mask & (1 << sock.irq):
+            note += "  (IRQ masked: no driver)"
+        if sock.faulted:
+            note += f"  FAULT: {sock.faulted}"
+        print(f"  {sock.id:<7}{class_name(sock.type):<5}{model:<15}{sock.function or '-':<10}{ports:<14}"
+              f"{irq:<5}{count:>10}{note}")
+    print("Device files are in motherboard/; inspect one with: python ape_devkit.py info motherboard/bus0.apebus")
+
 def _cmd_peek(args, kernel, io_manager):
     """Hex-dumps part of a process's virtual memory."""
     if len(args) < 2:
@@ -378,6 +404,7 @@ _COMMAND_HANDLERS = {
     "fg": _cmd_fg,
     "mem": _cmd_mem,
     "peek": _cmd_peek,
+    "lsdev": _cmd_lsdev,
 }
 
 def execute_command(command, args, kernel, io_manager, is_background=False):

@@ -53,10 +53,13 @@ class Kernel:
     MAX_WAIT = 0.05
 
     def __init__(self, proc_manager: ProcessManager, mem_manager: MemoryManager, board,
-                 apeos_version: str, os_name: str, os_version: str):
+                 apeos_version: str, os_name: str, os_version: str, motherboard=None):
         self.proc_manager = proc_manager
         self.mem_manager = mem_manager
         self.board = board
+        self.motherboard = motherboard    # sockets and devices (board.py)
+        self.irq_handlers = {"TIMER": self._timer_irq}   # drivers, by device function
+        self._unhandled_reported = set()
 
         # Determine project root to find the 'devices' directory
         # kernel.py is at aPEOSI/devices/internal/A/apeos/system2/sys/
@@ -138,6 +141,9 @@ class Kernel:
                 if self._schedule_round():
                     prompt_shown = False  # something terminated; redraw the prompt
 
+                # --- HARDWARE ------------------------------------------------
+                self._service_hardware()
+
             except KeyboardInterrupt:
                 fg = self.proc_manager.get_foreground_process()
                 if fg:
@@ -154,6 +160,31 @@ class Kernel:
         for process in self.proc_manager.get_running_processes():
             self.proc_manager.terminate(process.pid, "shutdown", quiet=True)
         self.mem_manager.set_current_pid(KERNEL_PID)
+
+    def _service_hardware(self):
+        """Lets every device run, then handles the interrupts they raised."""
+        mb = self.motherboard
+        if mb is None:
+            return
+        mb.advance()
+        for irq in mb.pending():
+            sock = mb.irq_socket(irq)
+            handler = self.irq_handlers.get(sock.function if sock else None)
+            mb.count_irq(irq)
+            if handler:
+                handler(sock)
+            else:
+                # Nobody to acknowledge it: a level-triggered line would stay high
+                # forever, so the kernel masks it, as real kernels do.
+                mb.mask_irq(irq)
+                if irq not in self._unhandled_reported:
+                    self._unhandled_reported.add(irq)
+                    what = f"{sock.desc.model} ({sock.function})" if sock else "an empty socket"
+                    print(f"\n[irq {irq}] no driver for {what}; IRQ {irq} masked.")
+
+    def _timer_irq(self, sock):
+        """Timer driver: acknowledge the interrupt (write 1 to STATUS.FIRED)."""
+        self.motherboard.write_reg(sock.id, "STATUS", 0x01)
 
     def _schedule_round(self):
         """

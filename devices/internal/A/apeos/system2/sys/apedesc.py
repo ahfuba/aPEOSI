@@ -19,7 +19,7 @@ skipped and the format can grow:
 
     tag (4 bytes)  length (u32)  payload (length bytes)  padding to 4 bytes
 
-    INFO  model, description, device version
+    INFO  model, description, device version, function
     PARM  parameters: name, type, value
     RGNS  regions: name, offset, size, kind, access, description
     REGS  registers: name, region, offset, width, access, reset value, fields
@@ -122,10 +122,11 @@ class Init:
 
 @dataclass
 class Descriptor:
-    device_class: bytes
+    device_class: bytes    # the socket it plugs into (or the kind of medium)
     model: str
     version: int = 1
     description: str = ""
+    function: str = ""     # what it does: "TIMER", "GPU", "UART", ...
     params: dict = field(default_factory=dict)
     regions: list = field(default_factory=list)
     registers: list = field(default_factory=list)
@@ -149,6 +150,16 @@ class Descriptor:
     @property
     def extension(self):
         return EXTENSIONS.get(self.device_class, ".ape")
+
+    def reg(self, name):
+        for r in self.registers:
+            if r.name == name:
+                return r
+        return None
+
+    def reg_offset(self, reg):
+        """Offset of a register from the start of the data area."""
+        return self.region(reg.region).offset + reg.offset
 
     def address(self, region_name, offset=0):
         """File offset of a byte inside a region of an instance."""
@@ -186,7 +197,8 @@ def _encode_value(value):
 def encode_descriptor(desc: Descriptor):
     """The descriptor's chunks, without the common header."""
     region_index = {r.name: i for i, r in enumerate(desc.regions)}
-    out = [_chunk(b"INFO", _s(desc.model) + _s(desc.description) + struct.pack("<H", desc.version))]
+    out = [_chunk(b"INFO", _s(desc.model) + _s(desc.description) + struct.pack("<H", desc.version)
+                  + _s(desc.function))]
 
     payload = struct.pack("<H", len(desc.params))
     for name, value in desc.params.items():
@@ -298,6 +310,8 @@ def decode_descriptor(buf):
         if tag == b"INFO":
             desc.model, desc.description = r.string(), r.string()
             (desc.version,) = r.take("<H")
+            if r.pos < r.end:  # added later in format v1: older files simply lack it
+                desc.function = r.string()
         elif tag == b"PARM":
             for _ in range(r.take("<H")[0]):
                 name = r.string()

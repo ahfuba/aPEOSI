@@ -1,5 +1,6 @@
 {
   "type": "bus",
+  "function": "panel",
   "name": "aPE-L1 Panel",
   "description": "8 LEDs and a push button (JSON version of ape-l1-panel.py)",
   "version": 1,

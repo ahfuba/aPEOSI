@@ -2,7 +2,7 @@
 
 A small line-numbered BASIC for aPEOSI, in the style of 1980s home computers.
 Code: `devices/internal/A/apeos/system2/sysApp/basic/basic.py`.
-Examples: `A:/basic/` (`hello.bas`, `guess.bas`, `primes.bas`, `bits.bas`, `taskman.bas`, `mmu.bas`).
+Examples: `A:/basic/` (`hello.bas`, `guess.bas`, `primes.bas`, `bits.bas`, `taskman.bas`, `mmu.bas`, `timer.bas`, `serial.bas`).
 
 ```
 basic                    open the BASIC prompt
@@ -109,6 +109,30 @@ To list every process:
 30 IF P > 0 THEN PRINT P, PNAME$(P), PRUNS(P)
 40 NEXT S
 ```
+
+### Devices (I/O ports)
+
+Talk to the devices in the motherboard's sockets, the way QBASIC programs used
+`INP` and `OUT` on a PC. Ports and registers are in [aPE Socket](aPE-Socket.md);
+`lsdev` shows which device sits where.
+
+| Keyword | Does |
+|---|---|
+| `IOBASE("bus0")` | the first I/O port of the device in a socket, or `-1` if there is none |
+| `INP(port)` | read a port. At a register's first port, the whole register; elsewhere, one byte. Empty ports read `255` |
+| `OUT port, value` | write a port, the same way |
+| `IRQCOUNT("bus0")` | interrupts delivered from that socket's device so far |
+
+```
+10 T = IOBASE("bus0")       ' the timer
+20 OUT T + 4, 500           ' LOAD = 500 ticks
+30 OUT T, 7                 ' CTRL = ENABLE + PERIODIC + IRQ_EN
+40 PRINT INP(T + 8)         ' COUNT, counting down
+```
+
+`timer.bas` programs the timer and watches its interrupts; `serial.bas` sends
+text out of the UART at a baud rate you choose and reads back what the echo plug
+on COM1 returns.
 
 ### Memory (MMU)
 

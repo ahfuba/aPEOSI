@@ -11,7 +11,7 @@ Inspect it:   python ape_devkit.py info docs/examples/ape-l1-panel.apebus
 
 from apedk import Device, Field
 
-DEVICE = Device("BUS", "aPE-L1 Panel", version=1, description="8 LEDs and a push button")
+DEVICE = Device("BUS", "aPE-L1 Panel", function="PANEL", version=1, description="8 LEDs and a push button")
 
 DEVICE.param("leds", 8)
 DEVICE.param("blink_hz", 2)

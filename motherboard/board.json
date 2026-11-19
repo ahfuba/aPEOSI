@@ -2,5 +2,13 @@
   "name": "aPE-B1 Classic",
   "cpu": "cpu/ape-p1.json",
   "ram": "ram/ape-r16k.json",
-  "ram_file": "ram0.aperam"
+  "ram_file": "ram0.aperam",
+  "sockets": [
+    { "id": "bus0", "type": "bus", "device": "bus/ape-t1-timer.py" },
+    { "id": "bus1", "type": "bus", "device": "bus/ape-u1-uart.py" },
+    { "id": "pci0", "type": "pci", "device": null },
+    { "id": "pci1", "type": "pci", "device": null },
+    { "id": "com1", "type": "ser", "device": "serial/ape-e1-echo.py", "controller": "bus1" },
+    { "id": "usb0", "type": "usb", "device": null }
+  ]
 }

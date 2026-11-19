@@ -5,7 +5,7 @@ parameters, memory regions and registers in Python (or JSON), and the kit
 checks the design and compiles it into a `.ape<class>` **module file**:
 
 ```
-my_device.py ──► aPE-DevKit ──► ape-g9.apegpu ──► aPEOSI and the tools read it
+my_device.py ──► aPE-DevKit ──► ape-g9.apepci ──► aPEOSI and the tools read it
  (or .json)      (validates)     (pure data)
 ```
 
@@ -20,7 +20,7 @@ source files that a compiler turns into binary blobs the kernel reads at boot.
 ## Quick start
 
 ```bash
-python ape_devkit.py new GPU "aPE-G9"
+python ape_devkit.py new PCI "aPE-G9" --function GPU
 ```
 
 That writes `ape-g9.py`, a template to edit. Then:
@@ -34,7 +34,7 @@ python ape_devkit.py build ape-g9.py
 ```
 
 ```bash
-python ape_devkit.py info ape-g9.apegpu
+python ape_devkit.py info ape-g9.apepci
 ```
 
 `check` validates without writing anything, `build` writes the module, and
@@ -45,7 +45,7 @@ python ape_devkit.py info ape-g9.apegpu
 ```python
 from apedk import Device, Field
 
-DEVICE = Device("BUS", "aPE-L1 Panel", version=1, description="8 LEDs and a push button")
+DEVICE = Device("BUS", "aPE-L1 Panel", function="PANEL", version=1, description="8 LEDs and a push button")
 
 DEVICE.param("leds", 8)
 
@@ -65,7 +65,7 @@ A source file must store its device in a variable called **`DEVICE`**.
 
 | Call | Describes |
 |---|---|
-| `Device(class, model, version, description)` | the device. Class is `RAM`, `MB`, `BUS`, `GPU`, `CPU`, `DISK` or `NET` |
+| `Device(socket, model, function, version, description)` | the device. **Socket** is where it plugs in (`BUS`, `PCI`, `SER`, `USB`, `RAM`, `CPU`, `MB`, or a medium: `DISK`, `NET`) and decides the file extension. **Function** says what it does (`TIMER`, `GPU`, ...) |
 | `.param(name, value)` | a fixed property: int, float, string or bool |
 | `.region(name, size, kind, access, offset, align, description)` | a block of the device's memory |
 | `.register(name, region, offset, width, access, reset, description, fields)` | a register inside a region |
@@ -81,6 +81,34 @@ combination of `r`, `w` and `x`.
 and start at their `reset` value when the device powers on. Fields name the
 bits: `lsb` is the lowest bit, and `width` is how many bits the field uses.
 
+## Giving a device logic
+
+A description alone is a set of plain registers. To make the device *do*
+something, define `LOGIC` in the same file: a subclass of `DeviceLogic` with
+hooks that run when the OS reads or writes a register, on every tick of the
+device's clock, and when a serial byte arrives.
+
+```python
+from apedk import Device, DeviceLogic, Field
+
+DEVICE = Device("BUS", "aPE-T1 Timer", function="TIMER")
+DEVICE.param("clock_hz", 1000)
+DEVICE.region("regs", size=16, kind="registers")
+DEVICE.register("CTRL", "regs", 0, fields=[Field("ENABLE", lsb=0)])
+DEVICE.register("COUNT", "regs", 4, width=32, access="r")
+
+class LOGIC(DeviceLogic):
+    def tick(self):
+        if self.field("CTRL.ENABLE"):
+            self.set("COUNT", self.reg("COUNT") + 1)
+```
+
+Plug it into a socket in `board.json`, and aPEOSI runs it. The hooks, the
+helpers and the socket rules are in the [aPE Socket spec](aPE-Socket.md);
+complete devices to learn from are in `motherboard/bus/` and `motherboard/serial/`.
+
+`python ape_devkit.py new BUS "aPE-T9 Mine" --function TIMER` writes a template with every hook.
+
 ## What gets checked
 
 `check` and `build` report every problem at once.
@@ -90,11 +118,11 @@ bits: `lsb` is the lowest bit, and `width` is how many bits the field uses.
 - register widths other than 8/16/32, or registers off their natural boundary
   (a 16-bit register needs an even offset, as on real buses)
 - reset values too big for the register, fields outside their register or overlapping each other
-- unknown classes, kinds or access letters, duplicate names, model names longer than 14 characters
+- unknown socket types, kinds or access letters, duplicate names, model names longer than 14 characters
 
 **Warnings** point out things that break the [naming scheme](../NAMING.md): a GPU
 called `aPE-X1` instead of `aPE-G…`, a model name not shaped like `aPE-<letter><model>`,
-or a register placed in a region that isn't a `registers` region.
+a missing function, or a register placed in a region that isn't a `registers` region.
 
 ## JSON instead of Python
 
@@ -103,6 +131,7 @@ The same device, without programming:
 ```json
 {
   "type": "bus",
+  "function": "panel",
   "name": "aPE-L1 Panel",
   "params": { "leds": 8 },
   "regions": [ { "name": "io", "size": 16, "kind": "registers" } ],
@@ -158,10 +187,11 @@ can't be plugged in as RAM.
 
 ## Safety
 
-- **Building a `.py` source runs it**, because it's a Python program. Only
-  build Python sources you trust, just as you would only run programs you trust.
-- **JSON specs and compiled modules are plain data.** They are safe to
-  share and to load.
+- **A `.py` device is a Python program.** Building it runs it, and plugging it
+  into a socket runs its `LOGIC` inside aPEOSI. Only use Python devices you
+  trust, just as you would only run programs you trust.
+- **JSON specs and compiled modules are plain data.** They have no logic, so
+  they are safe to share and to load.
 
 ## Tests
 

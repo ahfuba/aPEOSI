@@ -3,7 +3,7 @@ The Device builder: describe a device in Python, check it, compile it.
 
     from apedk import Device, Field
 
-    leds = Device("BUS", "aPE-L1 Panel", description="8 LEDs and a button")
+    leds = Device("BUS", "aPE-L1 Panel", function="PANEL", description="8 LEDs and a button")
     leds.region("io", size=16, kind="registers")
     leds.register("LEDS", "io", offset=0x0, width=8, description="one bit per LED")
     leds.register("CTRL", "io", offset=0x1, width=8, reset=0x01, fields=[
@@ -26,8 +26,15 @@ from devices.internal.A.apeos.system2.sys.apedev import (EXTENSIONS, NAME_MAX, c
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MODEL = re.compile(r"^aPE-([A-Z])[A-Za-z0-9]*( [A-Za-z0-9]+)*$")
 
-# Model letter of each device class (NAMING.md). Bus devices pick their own letter.
-CLASS_LETTERS = {"RAM": "R", "CPU": "P", "GPU": "G", "DISK": "D", "NET": "N", "MB": "B"}
+FUNCTION = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+# Model letter of each device function (NAMING.md). New functions pick an unused letter.
+FUNCTION_LETTERS = {
+    "BOARD": "B", "CPU": "P", "RAM": "R", "GPU": "G", "DISK": "D", "NET": "N",
+    "KEYBOARD": "K", "SOUND": "S", "TIMER": "T", "UART": "U", "ECHO": "E", "PANEL": "L",
+}
+# A socket's implied function, for sockets that only take one kind of device
+SOCKET_FUNCTION = {"RAM": "RAM", "CPU": "CPU", "MB": "BOARD"}
 
 
 class DevKitError(Exception):
@@ -46,10 +53,16 @@ def model_file_name(model, extension):
 class Device:
     """A device description under construction."""
 
-    def __init__(self, device_class, model, version=1, description=""):
-        code = class_code(device_class) if isinstance(device_class, str) else device_class
-        self._class_text = device_class if isinstance(device_class, str) else class_name(device_class)
-        self.desc = Descriptor(code or b"????", model, version, description)
+    def __init__(self, socket, model, function=None, version=1, description=""):
+        """
+        socket:   which socket the device plugs into: BUS, PCI, SER, USB, RAM, CPU, MB
+                  (or a medium: DISK, NET). It decides the file extension.
+        function: what the device does: "TIMER", "GPU", "UART", ... (stored in the file)
+        """
+        code = class_code(socket) if isinstance(socket, str) else socket
+        self._class_text = socket if isinstance(socket, str) else class_name(socket)
+        function = (function or SOCKET_FUNCTION.get(self._class_text.upper(), "")).upper()
+        self.desc = Descriptor(code or b"????", model, version, description, function)
         self._auto = []          # regions placed automatically: (region, alignment)
 
     # --- building --------------------------------------------------------------
@@ -100,8 +113,13 @@ class Device:
 
         cls = self._class_text.upper()
         if class_code(cls) is None:
-            err(f"unknown device class '{self._class_text}' (known: "
+            err(f"unknown socket type '{self._class_text}' (known: "
                 + ", ".join(class_name(c) for c in EXTENSIONS) + ")")
+        fn = d.function
+        if not fn:
+            warn("no function given: say what the device does, e.g. function=\"TIMER\"")
+        elif not FUNCTION.match(fn):
+            err(f"function '{fn}' must be an upper-case word like TIMER or GPU")
         if not d.model or not d.model.isascii():
             err("model name must be non-empty ASCII")
         elif len(d.model) > NAME_MAX:
@@ -109,11 +127,11 @@ class Device:
         m = MODEL.match(d.model or "")
         if not m:
             warn(f"model name '{d.model}' does not follow 'aPE-<letter><model>' (NAMING.md)")
-        elif cls in CLASS_LETTERS and m.group(1) != CLASS_LETTERS[cls]:
-            warn(f"{cls} models use the letter {CLASS_LETTERS[cls]} (e.g. aPE-{CLASS_LETTERS[cls]}1), "
+        elif fn in FUNCTION_LETTERS and m.group(1) != FUNCTION_LETTERS[fn]:
+            warn(f"{fn} devices use the letter {FUNCTION_LETTERS[fn]} (e.g. aPE-{FUNCTION_LETTERS[fn]}1), "
                  f"not {m.group(1)}")
-        elif cls == "BUS" and m.group(1) in CLASS_LETTERS.values():
-            warn(f"the letter {m.group(1)} belongs to another device class; pick a new one for a bus device")
+        elif fn and fn not in FUNCTION_LETTERS and m.group(1) in FUNCTION_LETTERS.values():
+            warn(f"the letter {m.group(1)} already belongs to another function; pick an unused one")
         if not 1 <= d.version <= 0xFFFF:
             err("version must be between 1 and 65535")
 
@@ -231,7 +249,7 @@ class Device:
         data = self.compile()
         path = path or os.path.join(directory, self.file_name)
         if os.path.splitext(path)[1] != self.desc.extension:
-            raise DevKitError([f"a {class_name(self.desc.device_class)} module must end in "
+            raise DevKitError([f"a {class_name(self.desc.device_class)}-socket module must end in "
                                f"{self.desc.extension}, not '{os.path.basename(path)}'"])
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, "wb") as f:
@@ -247,6 +265,6 @@ class Device:
 
     @classmethod
     def from_descriptor(cls, desc):
-        dev = cls(desc.device_class, desc.model, desc.version, desc.description)
+        dev = cls(desc.device_class, desc.model, desc.function, desc.version, desc.description)
         dev.desc = desc
         return dev

@@ -67,7 +67,7 @@ KEYWORDS = {
     "FOR", "TO", "STEP", "NEXT", "END", "STOP", "DIM", "POKE", "SLEEP", "CLS",
     "RANDOMIZE", "AND", "OR", "NOT", "MOD",
     "RUN", "LIST", "NEW", "SAVE", "LOAD", "BYE", "EXIT",
-    "KILL", "WAIT", "YIELD", "SHELL",
+    "KILL", "WAIT", "YIELD", "SHELL", "OUT",
 }
 
 TOKEN_RE = re.compile(r"""
@@ -854,6 +854,17 @@ class Basic:
     def _st_yield(self):
         self.request = _YIELD
 
+    def _st_out(self):
+        """OUT port, value: write a byte (or a whole register) to a device's I/O port."""
+        port = self._int(self._expr())
+        self._expect_op(",")
+        value = self._int(self._expr())
+        if not 0 <= port <= 0xFFFF or value < 0:
+            raise BasicError("ILLEGAL QUANTITY")
+        mb = self.kernel.motherboard
+        if mb is not None:
+            mb.io_write(port, value)
+
     def _st_shell(self):
         command = _str_arg(self._expr()).strip()
         info = _command_info(self, command)
@@ -1083,6 +1094,29 @@ def _board(self):
     return self.kernel.board
 
 
+def _inp(self, port):
+    """INP(port): read a device's I/O port. Empty ports read &HFF, as on a real bus."""
+    port = self._int(port)
+    if not 0 <= port <= 0xFFFF:
+        raise ValueError
+    mb = self.kernel.motherboard
+    return float(mb.io_read(port) if mb is not None else 0xFF)
+
+
+def _iobase(self, socket_id):
+    """IOBASE("bus0"): the first I/O port of a socket's device, or -1."""
+    mb = self.kernel.motherboard
+    sock = mb.by_id.get(_str_arg(socket_id).lower()) if mb is not None else None
+    return -1.0 if sock is None or sock.io_base is None or not sock.present else float(sock.io_base)
+
+
+def _irqcount(self, socket_id):
+    """IRQCOUNT("bus0"): interrupts delivered from a socket's device so far."""
+    mb = self.kernel.motherboard
+    sock = mb.by_id.get(_str_arg(socket_id).lower()) if mb is not None else None
+    return 0.0 if sock is None or sock.irq is None else float(mb.irq_counts[sock.irq])
+
+
 # Names that read like variables but ask the system for a value.
 SYSVARS = {
     "RND": lambda s: random.random(),
@@ -1132,6 +1166,10 @@ FUNCTIONS = {
     "FRAME": (1, 1, _frame),
     "PHYS": (1, 1, _phys),
     "SPAWN": (1, 1, _spawn),
+    # devices
+    "INP": (1, 1, _inp),
+    "IOBASE": (1, 1, _iobase),
+    "IRQCOUNT": (1, 1, _irqcount),
 }
 
 STATEMENTS = {
@@ -1144,5 +1182,5 @@ STATEMENTS = {
     "NEW": Basic._st_new, "SAVE": Basic._st_save, "LOAD": Basic._st_load,
     "BYE": Basic._st_bye, "EXIT": Basic._st_bye,
     "KILL": Basic._st_kill, "WAIT": Basic._st_wait, "YIELD": Basic._st_yield,
-    "SHELL": Basic._st_shell,
+    "SHELL": Basic._st_shell, "OUT": Basic._st_out,
 }

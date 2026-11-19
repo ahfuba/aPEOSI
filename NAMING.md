@@ -24,63 +24,67 @@ programs and files, including mods.
 Host-side tools are Python programs at the repo root named `ape_<tool>.py`:
 `ape_watchdog.py`, `ape_display.py`.
 
-## 3. Hardware modules: `aPE-<letter><model>`
+## 3. Hardware models: `aPE-<letter><model>`
 
-Each kind of device has one letter, so model names never collide with each
-other or with product names.
+The letter says the device's **function** (what it does), so model names never
+collide with each other or with product names.
 
-| Letter | Device | Examples | Spec file |
+| Letter | Function | Examples | Plugs into |
 |---|---|---|---|
-| **B** | motherboard | aPE-B1 Classic | `motherboard/board.json` |
-| **P** | processor (CPU) | aPE-P1, aPE-P0 Turtle | `motherboard/cpu/ape-p1.json` |
-| **R** | RAM | aPE-R16K, aPE-R64K, aPE-R256K | `motherboard/ram/ape-r16k.json` |
-| **G** | GPU | aPE-G1 (framebuffer), aPE-G2 (shader cores) | `motherboard/gpu/ape-g1.json` |
-| **D** | disk | aPE-D1 | `motherboard/disk/ape-d1.json` |
-| **N** | network card | aPE-N1 | `motherboard/net/ape-n1.json` |
-| **K** | keyboard controller (bus device) | aPE-K1 | `motherboard/bus/ape-k1.json` |
-| **S** | sound chip (bus device) | aPE-S1 | `motherboard/bus/ape-s1.json` |
+| **B** | motherboard | aPE-B1 Classic | (it *is* the board) |
+| **P** | processor | aPE-P1, aPE-P0 Turtle | CPU socket |
+| **R** | RAM | aPE-R16K, aPE-R64K, aPE-R256K | memory slot |
+| **T** | timer | aPE-T1 Timer | system bus |
+| **U** | UART (serial port controller) | aPE-U1 UART | system bus or PCI |
+| **G** | GPU | aPE-G1, aPE-G2 | PCI |
+| **S** | sound | aPE-S1 | PCI, or the system bus |
+| **K** | keyboard | aPE-K1 | USB, or a serial port |
+| **D** | disk | aPE-D1 | PCI (a controller) or USB |
+| **N** | network card | aPE-N1 | PCI or USB |
+| **E** | echo / loopback plug | aPE-E1 Echo | serial port |
+| **L** | front panel (example) | aPE-L1 Panel | system bus |
 
 - The model is a number, or a size for RAM (`16K`). An optional nickname can follow: `aPE-P0 Turtle`.
 - A model name is at most **14 characters** (it is stored in every device file's header).
-- The spec file name is the model name in lowercase, with spaces as hyphens: `aPE-P0 Turtle` → `ape-p0-turtle.json`.
-- Mods follow the same pattern. A modded CPU could be `aPE-P7 Rocket` in `cpu/ape-p7-rocket.json`.
+- Device source files are the model name in lowercase with hyphens, in the folder of their socket:
+  `aPE-T1 Timer` → `motherboard/bus/ape-t1-timer.py`.
+- A new function picks an unused letter. A modded timer could be `aPE-T7 Rocket`.
 
-## 4. Device files: `<class><n>.ape<class>`
+## 4. Device files: the extension says the socket
 
-At runtime each device instance is one binary file. Every file starts with
-the common aPE device header ([formats](docs/aPE-hardware.md)), whose class
-code matches the extension: the extension is always `.ape` + the class code in lowercase.
+A device file's extension names **the socket it plugs into**; what the device
+does is its *function*, stored inside the file. (Full spec: [aPE Socket](docs/aPE-Socket.md).)
 
-| Class code | Extension | Instance file | Holds | Lifetime | Status |
-|---|---|---|---|---|---|
-| `RAM` | `.aperam` | `ram0.aperam` | all memory: kernel tables, processes | volatile | implemented |
-| `MB` | `.apemb` | `board0.apemb` | the list of devices the OS discovers at boot | rebuilt at boot | reserved |
-| `BUS` | `.apebus` | `bus0.apebus` | registers of every bus device (keyboard, sound, ...) | volatile | reserved |
-| `GPU` | `.apegpu` | `gpu0.apegpu` | VRAM, display registers, later shader cores | volatile | reserved |
-| `CPU` | `.apecpu` | `cpu0.apecpu` | registers, PC, flags, cycle counter, cache | volatile | reserved |
-| `DISK` | `.apedisk` | `disk0.apedisk` | **files: user data** | **persistent** | reserved |
-| `NET` | `.apenet` | `net0.apenet`, `air0.apenet` | a network card's buffers and link state, or a shared medium | volatile | reserved |
+| Code | Extension | Socket | Example instance |
+|---|---|---|---|
+| `CPU` | `.apecpu` | CPU socket | `cpu0.apecpu` |
+| `RAM` | `.aperam` | memory slot (SODIMM) | `ram0.aperam` |
+| `MB` | `.apemb` | the motherboard itself | `board0.apemb` |
+| `BUS` | `.apebus` | on-board system bus | `bus0.apebus` (a timer), `bus1.apebus` (a UART) |
+| `PCI` | `.apepci` | expansion slot | `pci0.apepci` (a GPU card) |
+| `SER` | `.apeser` | serial port | `com1.apeser` (an echo plug) |
+| `USB` | `.apeusb` | USB port | `usb0.apeusb` |
+
+Media are not sockets but what devices use:
+
+| Code | Extension | Medium | Example |
+|---|---|---|---|
+| `DISK` | `.apedisk` | storage | `disk0.apedisk` |
+| `NET` | `.apenet` | network cable or "air" | `air0.apenet` |
 
 Rules:
 
-- **The motherboard file lists devices; each device keeps its own state.** `board0.apemb`
-  says "there is a sound chip and a network card"; their registers and buffers live in their own files.
-- **The bus is a container.** Small devices (keyboard, sound, later a timer) share
-  `bus0.apebus`, each in its own region. They need no class of their own.
-- **New classes are rare.** A device gets its own class only when its state is too big or
-  too different for the bus. Until then it is a bus device.
-- **Volatile files** are wiped and recreated at every boot. They are safe to delete.
-- **Disks are persistent.** A `.apedisk` file *is* the disk: deleting it deletes the data,
-  and copying it is a complete backup. aPEOSI never creates or overwrites a disk file on
-  its own; new disks are made by a separate format tool.
-- **Modules vs instances.** A compiled device module (from aPE-DevKit) uses the same
-  extension as its instances, told apart by the name: `ape-g1.apegpu` is the module
-  (model name), `gpu0.apegpu` is the running instance (`<class><n>`).
+- **Instance files are named after their socket:** `<socket id>.<extension>`, e.g. `bus0.apebus`.
+- **Compiled modules are named after their model:** `ape-t1-timer.apebus`. Same extension, told apart by name.
+- **Device files are volatile:** rebuilt at every boot, safe to delete.
+- **Media are persistent:** a `.apedisk` file *is* the data. Deleting it deletes the data, copying it
+  is a complete backup, and aPEOSI never creates or overwrites one on its own.
+- **The extension = `.ape` + the code in lowercase.** A new socket type needs a code of up to
+  4 letters, its extension, and an entry in `apedev.py`.
 
-All device files are git-ignored: volatile ones because they are recreated at boot,
+All device and media files are git-ignored: device files because they are rebuilt at boot,
 compiled modules because they are build outputs (commit the `.py` or `.json` source),
-disks because they hold personal data. A new device class needs a class code of up to
-4 letters, a matching `.ape<code>` extension, and an entry in `apedev.py`.
+disks because they hold personal data.
 
 ## 5. Program and file types
 

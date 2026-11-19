@@ -49,9 +49,11 @@ Then try `counter &`, `banana note.txt`, `ps`, `mem`, `peek 1 0` and `kill 1`.
 
 **aPE-BASIC**: a BASIC like the 1980s home computers had, so you can write your own programs. Type `basic` for the BASIC prompt, or run a file with `basic basic/guess.bas`. Its program and variables live in aPE-RAM, and `PEEK`/`POKE` reach its memory directly. See [`docs/aPE-BASIC.md`](docs/aPE-BASIC.md).
 
+**Sockets**: the motherboard has a system bus, PCI slots and serial ports, and devices with real logic plug into them: a timer that raises interrupts, a UART that sends bytes at a real baud rate, and an echo plug on COM1. Each device *is* a live file (`bus0.apebus`, `com1.apeser`). `lsdev` lists them; BASIC talks to them with `INP` and `OUT`. Spec: [`docs/aPE-Socket.md`](docs/aPE-Socket.md).
+
 **aPE-DevKit**: design your own hardware. Describe a device's registers and memory in Python or JSON, and `ape_devkit.py` checks it and compiles it into a `.ape<class>` module file. See [`docs/aPE-DevKit.md`](docs/aPE-DevKit.md).
 
-Also new in 1.2: background processes keep running while you type, `Sleep`/`ReadLine` system calls, virtual memory with demand paging, Ctrl+C kills the foreground app, and the new commands `ps`, `kill`, `fg`, `mem`, `peek`, `counter` and `basic`. A guided tour of how it all works is in [`docs/how-aPEOSI-1.2-works.md`](docs/how-aPEOSI-1.2-works.md).
+Also new in 1.2: background processes keep running while you type, `Sleep`/`ReadLine` system calls, virtual memory with demand paging, Ctrl+C kills the foreground app, and the new commands `ps`, `kill`, `fg`, `mem`, `peek`, `lsdev`, `counter` and `basic`. A guided tour of how it all works is in [`docs/how-aPEOSI-1.2-works.md`](docs/how-aPEOSI-1.2-works.md).
 
 Where the project is going next: see [`ROADMAP.md`](ROADMAP.md). How things are named: [`NAMING.md`](NAMING.md).
 

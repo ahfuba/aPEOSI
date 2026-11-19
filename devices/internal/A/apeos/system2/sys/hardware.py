@@ -13,7 +13,8 @@ Keep this file free of aPEOSI imports so the Watchdog can use it on its own.
 
 import json
 import os
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 
 from . import apedesc
 from .apedev import CLASS_CPU, CLASS_RAM, class_name
@@ -52,6 +53,7 @@ class Board:
     ram: RAMSpec
     ram_file: str        # absolute path of the .aperam file
     path: str
+    sockets: list = field(default_factory=list)   # [{id, type, device, controller}]
 
 
 def _read_json(path):
@@ -139,4 +141,40 @@ def load_board(motherboard_dir, board_file="board.json"):
     cpu = load_cpu(resolve(_require(data, "cpu", str, board_path)))
     ram = load_ram(resolve(_require(data, "ram", str, board_path)))
     ram_file = resolve(data.get("ram_file", "ram0.aperam"))
-    return Board(data.get("name", "Unnamed board"), cpu, ram, os.path.abspath(ram_file), board_path)
+    sockets = _load_sockets(data.get("sockets", []), resolve, board_path)
+    return Board(data.get("name", "Unnamed board"), cpu, ram, os.path.abspath(ram_file), board_path, sockets)
+
+
+SOCKET_ID = re.compile(r"^[a-z]{2,5}[0-9]{1,2}$")
+SOCKET_TYPES = ("bus", "pci", "ser", "usb")
+
+
+def _load_sockets(entries, resolve, board_path):
+    """Checks the board's socket list. Each socket: id, type, optional device and controller."""
+    if not isinstance(entries, list):
+        raise HardwareError(f"{board_path}: 'sockets' must be a list")
+    sockets, ids = [], set()
+    for i, e in enumerate(entries):
+        where = f"{board_path}: sockets[{i}]"
+        if not isinstance(e, dict):
+            raise HardwareError(f"{where} must be an object")
+        sid = _require(e, "id", str, where)
+        stype = _require(e, "type", str, where).lower()
+        if not SOCKET_ID.match(sid):
+            raise HardwareError(f"{where}: socket id '{sid}' must look like bus0, pci1, com1")
+        if sid in ids:
+            raise HardwareError(f"{where}: socket id '{sid}' is used twice")
+        if stype not in SOCKET_TYPES:
+            raise HardwareError(f"{where}: unknown socket type '{stype}' (use {', '.join(SOCKET_TYPES)})")
+        device = e.get("device")
+        if device is not None and stype == "usb":
+            raise HardwareError(f"{where}: USB sockets are specified but not built yet; leave this one empty")
+        if device is not None and not isinstance(device, str):
+            raise HardwareError(f"{where}: 'device' must be a file path or null")
+        controller = e.get("controller")
+        if stype == "ser" and device is not None and not controller:
+            raise HardwareError(f"{where}: a serial port needs a 'controller' (the UART socket that drives it)")
+        ids.add(sid)
+        sockets.append({"id": sid, "type": stype, "device": resolve(device) if device else None,
+                        "controller": controller})
+    return sockets

@@ -1,12 +1,14 @@
 """
 JSON device specs, for modders who would rather not write Python.
 
-The simple specs in /motherboard (RAM and CPU modules) already are valid
-input: every top-level key that isn't one of the reserved keys below becomes
+"type" is the socket the device plugs into (bus, pci, ser, ram, cpu, ...),
+"function" says what it does. The simple specs in /motherboard (RAM and CPU
+modules) already are valid input: every top-level key that isn't one of the reserved keys below becomes
 a parameter. A full spec can also describe regions and registers:
 
     {
       "type": "bus",
+      "function": "panel",
       "name": "aPE-L1 Panel",
       "description": "8 LEDs and a button",
       "params":    { "leds": 8 },
@@ -25,7 +27,7 @@ import json
 
 from .device import DevKitError, Device, Field
 
-RESERVED = {"type", "name", "description", "version", "params", "regions", "registers", "init"}
+RESERVED = {"type", "function", "name", "description", "version", "params", "regions", "registers", "init"}
 
 
 def _need(obj, key, kind, where):
@@ -44,7 +46,7 @@ def device_from_spec(spec, source="spec"):
     if not isinstance(spec, dict):
         raise DevKitError([f"{source}: the spec must be a JSON object"])
     dev = Device(_need(spec, "type", str, source), _need(spec, "name", str, source),
-                 spec.get("version", 1), spec.get("description", ""))
+                 spec.get("function"), spec.get("version", 1), spec.get("description", ""))
     for key, value in spec.items():
         if key not in RESERVED:
             dev.param(key, value)

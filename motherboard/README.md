@@ -9,12 +9,41 @@ motherboard/
 ├── cpu/                CPU modules
 │   ├── ape-p1.json         200 Hz, the default
 │   └── ape-p0-turtle.json  4 Hz, slow enough to follow every context switch
+├── bus/                on-board devices (timer, UART)
+├── serial/             serial-port devices (echo plug)
 ├── ram/                RAM modules (SODIMMs)
 │   ├── ape-r16k.json       64 frames x 256 B, the default (easy to watch)
 │   ├── ape-r64k.json       256 frames x 256 B
 │   └── ape-r256k.json      256 frames x 1 KiB
-└── ram0.aperam         the RAM itself, created at boot (not committed)
+├── ram0.aperam         the RAM itself, created at boot (not committed)
+└── bus0.apebus, ...    every plugged-in device, created at boot (not committed)
 ```
+
+## Sockets
+
+Besides the CPU and RAM, the board has **sockets** that devices plug into: the
+on-board system bus (`bus`), expansion slots (`pci`), serial ports (`ser`) and
+USB ports (`usb`, not built yet). They are listed in `board.json`:
+
+```json
+"sockets": [
+  { "id": "bus0", "type": "bus", "device": "bus/ape-t1-timer.py" },
+  { "id": "bus1", "type": "bus", "device": "bus/ape-u1-uart.py" },
+  { "id": "pci0", "type": "pci", "device": null },
+  { "id": "com1", "type": "ser", "device": "serial/ape-e1-echo.py", "controller": "bus1" }
+]
+```
+
+| Device | File | Socket |
+|---|---|---|
+| aPE-T1 Timer | `bus/ape-t1-timer.py` | system bus |
+| aPE-U1 UART | `bus/ape-u1-uart.py` | system bus (drives a serial port) |
+| aPE-E1 Echo | `serial/ape-e1-echo.py` | serial port |
+
+At boot every device gets its own live file next to the RAM: `bus0.apebus`,
+`bus1.apebus`, `com1.apeser`, and `board0.apemb` for the board itself. The
+socket rules and how to write your own device are in the
+[aPE Socket spec](../docs/aPE-Socket.md).
 
 ## Swapping parts
 
