@@ -1,0 +1,28 @@
+{
+  "type": "bus",
+  "name": "aPE-L1 Panel",
+  "description": "8 LEDs and a push button (JSON version of ape-l1-panel.py)",
+  "version": 1,
+  "params": { "leds": 8, "blink_hz": 2 },
+  "regions": [
+    { "name": "io", "size": 16, "kind": "registers", "description": "panel registers" },
+    { "name": "pattern", "size": 32, "kind": "buffer", "description": "LED patterns to play" }
+  ],
+  "registers": [
+    { "name": "LEDS", "region": "io", "offset": 0, "description": "one bit per LED, 1 = lit" },
+    { "name": "CTRL", "region": "io", "offset": 1, "reset": 1, "description": "panel control",
+      "fields": [
+        { "name": "ENABLE", "lsb": 0, "description": "1 = panel on" },
+        { "name": "BLINK", "lsb": 1, "width": 2, "description": "0 steady, 1 slow, 2 fast" },
+        { "name": "PLAY", "lsb": 3, "description": "1 = play the pattern buffer" }
+      ] },
+    { "name": "BUTTON", "region": "io", "offset": 2, "access": "r", "description": "button state",
+      "fields": [
+        { "name": "DOWN", "lsb": 0, "description": "1 while pressed" },
+        { "name": "CLICKED", "lsb": 1, "description": "set by a press; cleared when read" }
+      ] },
+    { "name": "PRESSES", "region": "io", "offset": 4, "width": 32, "access": "r",
+      "description": "total button presses" }
+  ],
+  "init": [ { "region": "pattern", "bytes": [1, 2, 4, 8, 16, 32, 64, 128] } ]
+}

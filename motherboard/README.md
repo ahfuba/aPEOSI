@@ -72,7 +72,7 @@ Give each board its own `ram_file` if you want to run two at once.
 
 | field | meaning | allowed |
 |---|---|---|
-| `name` | shown in `sysinfo` and the Watchdog | up to 16 characters |
+| `name` | shown in `sysinfo` and the Watchdog | up to 14 characters |
 | `page_size` | bytes per page/frame | power of two, at least 256 |
 | `num_pages` | number of physical frames | 16 – 256 |
 
@@ -80,6 +80,10 @@ Size = `page_size × num_pages`. The limits come from the format: page-table
 entries and frame numbers are 1 byte each, so there are at most 256 frames.
 The first few frames always go to the kernel (header, frame table, process
 table, keyboard buffer).
+
+Modules can also be **compiled** with [aPE-DevKit](../docs/aPE-DevKit.md)
+(`python ape_devkit.py build ram/my-ram.json` → `ape-r32k.aperam`), and
+`board.json` can point to the compiled file instead of the JSON.
 
 aPEOSI checks every file at boot ("BIOS") and tells you exactly what is wrong
 if a part is invalid.

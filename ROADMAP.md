@@ -14,7 +14,7 @@ Legend: ✅ done · 🔨 current stage · 💡 planned · 🐞 known issue
 ```
 ┌──────────────────────────────── TOOLS ────────────────────────────────┐
 │  aPE-Watchdog ✅ (recording & replay 💡)   aPE-Display 💡               │
-│  aPE-DevKit 💡   Benchmarks 💡                                          │
+│  aPE-DevKit ✅   Benchmarks 💡                                          │
 └───────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────── SOFTWARE ───────────────────────────────┐
 │  aPE-BASIC ✅   Banana Editor ✅   aPE-VM 💡   aPE-C 💡   .apx 💡       │
@@ -86,11 +86,13 @@ Goal: 1980s-style games in aPE-BASIC, on the first real devices.
 Rule: **every device arrives together with the software that uses it.**
 
 ### Toolkit (first)
-- [ ] **aPE-DevKit** (`apedk` package, `ape_devkit.py` tool): describe a device in Python
+- [x] **aPE-DevKit** (`apedk` package, `ape_devkit.py` tool): describe a device in Python
       (parameters, registers, memory regions) and compile it into a `.ape<class>` module file.
       Validates the design at build time; the compiled file is pure data, so device mods are safe to share.
       Can compile the existing JSON specs too
-- [ ] Device descriptors: every device file declares its named regions, so tools can show any device without device-specific code
+- [x] Device descriptors: every device file declares its named regions, so tools can show any device without device-specific code
+- [x] aPEOSI boots from compiled CPU and RAM modules as well as JSON specs
+- [x] [Guide](docs/aPE-DevKit.md), example device (`docs/examples/ape-l1-panel`), and tests (`python -m unittest discover tests`)
 
 ### Hardware
 - [ ] **aPE-B1 board file `board0.apemb`**: a simple device list the OS reads at boot to discover its hardware
@@ -260,5 +262,5 @@ Name it by the [naming scheme](NAMING.md).
 | CPU | a JSON spec, e.g. `ape-p2.json` | `motherboard/cpu/` | [modding guide](motherboard/README.md) |
 | App | a Python class with `run()` that yields system calls | `sysApp/` + a line in `sys_cmd.csv` | [how it works](docs/how-aPEOSI-1.2-works.md) |
 | BASIC program | a `.bas` file | anywhere on a drive | [aPE-BASIC](docs/aPE-BASIC.md) |
-| Device module (Stage 1+) | a Python description compiled with aPE-DevKit | `motherboard/<class>/` | aPE-DevKit docs (planned) |
+| Device module | a Python or JSON description compiled with aPE-DevKit | `motherboard/<class>/` | [aPE-DevKit](docs/aPE-DevKit.md) |
 | New hardware class | a class code, a `.ape<class>` extension and a header after the common header | `apedev.py` | [formats](docs/aPE-hardware.md) |

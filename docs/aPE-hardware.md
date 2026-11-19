@@ -26,10 +26,42 @@ All numbers are little-endian. Code: `devices/internal/A/apeos/system2/sys/apede
 |---|---|---|---|
 | 0 | 4 | magic | `41 50 45 1A` = `"APE"` + `0x1A` |
 | 4 | 4 | device class | see table above |
-| 8 | 2 | format version | version of the class-specific layout |
-| 10 | 2 | header size | common + class header, in bytes |
-| 12 | 4 | device size | size of the whole file, in bytes |
-| 16 | 16 | device name | ASCII, zero-padded |
+| 8 | 2 | format version | version of the class-specific layout (or of the descriptor) |
+| 10 | 2 | header size | where the device's own data starts, in bytes |
+| 12 | 4 | device size | size of the whole instance, in bytes |
+| 16 | 2 | flags | bit 0 `MODULE`: a compiled description, not a running device; bit 1 `PERSISTENT`: holds data, never recreated (disks) |
+| 18 | 14 | device name | the model name, ASCII, zero-padded |
+
+## Device descriptors
+
+New device classes describe themselves. Right after the common header comes a
+**descriptor**: a list of chunks saying what the device's parameters, regions
+and registers are. aPE-DevKit writes descriptors ([guide](aPE-DevKit.md));
+aPEOSI and the tools read them (`sys/apedesc.py`). RAM predates descriptors
+and keeps its own fixed header (below).
+
+```
+0             common header (32 bytes)
+32            descriptor chunks
+header_size   data area: the regions (instances only; modules stop after the descriptor)
+```
+
+Each chunk is `tag (4 bytes)`, `length (u32)`, the payload, then padding to
+4 bytes. Readers skip tags they don't know, so the format can grow.
+
+| Tag | Payload |
+|---|---|
+| `INFO` | model (string), description (string), device version (u16) |
+| `PARM` | count (u16), then per parameter: name (string), type (u8: 0 int, 1 float, 2 string, 3 bool), value (i64 / f64 / string / u8) |
+| `RGNS` | count (u16), then per region: name, offset (u32), size (u32), kind (u8), access (u8), description |
+| `REGS` | count (u16), then per register: name, region index (u16), offset (u32), width in bits (u8), access (u8), reset (u32), description, field count (u8), then per field: name, lsb (u8), width (u8), description |
+| `INIT` | count (u16), then per block: region index (u16), offset (u32), length (u32), bytes |
+| `END\0` | empty: end of the descriptor |
+
+Strings are a u16 length followed by UTF-8. Region kinds: 0 data, 1 registers,
+2 vram, 3 buffer, 4 rom, 5 state. Access bits: 1 read, 2 write, 4 execute.
+Offsets of regions are relative to the data area; offsets of registers are
+relative to their region. The data area starts on a 64-byte boundary.
 
 ## `.aperam`: RAM
 

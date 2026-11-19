@@ -1,9 +1,12 @@
 """
 Motherboard loader.
 
-aPEOSI's "hardware" is described by JSON files in the /motherboard folder at
-the project root. ``board.json`` picks which CPU and RAM module are plugged
-in; anyone can add their own modules (see motherboard/README.md).
+aPEOSI's "hardware" is described by files in the /motherboard folder at the
+project root. ``board.json`` picks which CPU and RAM module are plugged in;
+anyone can add their own modules (see motherboard/README.md).
+
+A module can be a JSON spec or a module compiled by aPE-DevKit
+(``ape-p1.apecpu``, ``ape-r16k.aperam``). Both give the same fields.
 
 Keep this file free of aPEOSI imports so the Watchdog can use it on its own.
 """
@@ -12,6 +15,8 @@ import json
 import os
 from dataclasses import dataclass
 
+from . import apedesc
+from .apedev import CLASS_CPU, CLASS_RAM, class_name
 from .aperam import Layout
 
 
@@ -73,8 +78,29 @@ def _require(data, key, kind, path):
     return value
 
 
+def _read_spec(path, device_class):
+    """
+    Reads a module's fields from a JSON spec or a compiled module file.
+    Compiled modules store them as parameters; the result looks the same.
+    """
+    if not path.lower().endswith(".json"):
+        try:
+            desc = apedesc.load_module(path)
+        except FileNotFoundError:
+            raise HardwareError(f"Hardware file not found: {path}")
+        except apedesc.DescriptorError as e:
+            raise HardwareError(f"{path}: {e}")
+        if desc.device_class != device_class:
+            raise HardwareError(f"{path}: this is a {class_name(desc.device_class)} module, "
+                                f"not a {class_name(device_class)} module")
+        data = dict(desc.params)
+        data.update(type=class_name(device_class).lower(), name=desc.model, description=desc.description)
+        return data
+    return _read_json(path)
+
+
 def load_cpu(path):
-    data = _read_json(path)
+    data = _read_spec(path, CLASS_CPU)
     if data.get("type") != "cpu":
         raise HardwareError(f"{path}: not a CPU module (expected \"type\": \"cpu\")")
     clock = _require(data, "clock_hz", int, path)
@@ -84,11 +110,11 @@ def load_cpu(path):
 
 
 def load_ram(path):
-    data = _read_json(path)
+    data = _read_spec(path, CLASS_RAM)
     if data.get("type") != "ram":
         raise HardwareError(f"{path}: not a RAM module (expected \"type\": \"ram\")")
     spec = RAMSpec(
-        _require(data, "name", str, path)[:16],
+        _require(data, "name", str, path)[:14],
         _require(data, "page_size", int, path),
         _require(data, "num_pages", int, path),
         data.get("description", ""),

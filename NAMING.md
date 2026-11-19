@@ -41,6 +41,7 @@ other or with product names.
 | **S** | sound chip (bus device) | aPE-S1 | `motherboard/bus/ape-s1.json` |
 
 - The model is a number, or a size for RAM (`16K`). An optional nickname can follow: `aPE-P0 Turtle`.
+- A model name is at most **14 characters** (it is stored in every device file's header).
 - The spec file name is the model name in lowercase, with spaces as hyphens: `aPE-P0 Turtle` → `ape-p0-turtle.json`.
 - Mods follow the same pattern. A modded CPU could be `aPE-P7 Rocket` in `cpu/ape-p7-rocket.json`.
 
@@ -77,6 +78,7 @@ Rules:
   (model name), `gpu0.apegpu` is the running instance (`<class><n>`).
 
 All device files are git-ignored: volatile ones because they are recreated at boot,
+compiled modules because they are build outputs (commit the `.py` or `.json` source),
 disks because they hold personal data. A new device class needs a class code of up to
 4 letters, a matching `.ape<code>` extension, and an entry in `apedev.py`.
 
