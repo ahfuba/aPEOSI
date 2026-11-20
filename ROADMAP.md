@@ -82,6 +82,10 @@ Each stage builds what the next one needs.
 
 ## 🔨 Stage 1: finish 1.x (devices, graphics, games)
 
+> **Feature freeze:** no new features until the presentable-release checklist is done
+> (tests ✅, CI ✅, README ✅, a Windows try-out, merge into `main`).
+> After that: **no new feature without its tests** ([TESTING.md](TESTING.md)).
+
 Goal: 1980s-style games in aPE-BASIC, on the first real devices.
 Rule: **every device arrives together with the software that uses it.**
 
@@ -247,8 +251,8 @@ and with something to observe in aPE-Watchdog.
 
 ### Engineering
 - [ ] Package layout, run with `python -m apeosi`; rename `sysApp/` and `system2/` to match [NAMING.md](NAMING.md)
-- [ ] `pytest` tests that drive the shell from a script
-- [ ] GitHub Actions CI
+- [x] System tests that boot aPEOSI and drive the shell from a script ([TESTING.md](TESTING.md))
+- [x] GitHub Actions CI: every push tested on Windows, Linux and macOS, Python 3.10/3.12/3.13
 - [ ] **Benchmarks**: measure context-switch, system-call and memory costs, to prove the README's "Python is too heavy" claim
 - [ ] **Write-log recording**: the simulator logs every write (time, address, old, new), so recordings miss nothing
 
@@ -259,7 +263,7 @@ and with something to observe in aPE-Watchdog.
 - [ ] The shell's `sleep` command freezes everything while it runs (it should be a process or a system call)
 - [ ] `cd` to another drive (`cd B:/foo`) works out the path against the current drive
 - [ ] `force_dlt` can delete the OS's own files, because drive `A:` is the OS folder
-- [ ] Untested on Windows: Ctrl+C handling, the keyboard thread, the shared RAM file
+- [ ] Windows: the automated tests pass there in CI; Ctrl+C and the Watchdog window still need the [manual check](TESTING.md#manual-check-about-5-minutes)
 - [ ] On Windows, close aPE-Watchdog before booting with a different RAM size
 
 ---
