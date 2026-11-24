@@ -17,7 +17,7 @@ class Console:
     """
     The keyboard. A background thread reads lines and queues them, so the
     kernel never has to block on input() and background processes keep
-    running while you type.
+    running while a line is being typed.
     """
 
     def __init__(self):

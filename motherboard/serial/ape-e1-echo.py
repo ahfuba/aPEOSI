@@ -3,8 +3,8 @@ aPE-E1 Echo: a serial loopback plug.
 
 Real technicians plugged a "loopback plug" into a serial port to test it:
 every byte sent comes straight back. This one can also shout: with
-"uppercase" set, letters come back in upper case, so you can tell the
-echo apart from what you sent.
+"uppercase" set, letters come back in upper case, so the echo is easy to
+tell apart from what was sent.
 
 It plugs into a serial port (SER socket). Serial devices have no addresses:
 they only see a stream of bytes, one at a time, through on_serial().

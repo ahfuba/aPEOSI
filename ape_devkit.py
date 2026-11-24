@@ -11,7 +11,7 @@ aPE-DevKit command-line tool: build, check and inspect aPE device files.
 
 A Python device source is a normal Python file that creates a Device and
 stores it in a variable called DEVICE. Building it runs that file, so only
-build Python sources you trust. JSON sources and compiled modules are plain
+build trusted Python sources. JSON sources and compiled modules are plain
 data and safe to share.
 
 Guide: docs/aPE-DevKit.md
@@ -175,7 +175,7 @@ def cmd_instance(args):
 
 
 TEMPLATE = '''"""
-{model}: describe your device here.
+{model}: a short description of the device.
 
 Check it:  python ape_devkit.py check {source}
 Plug it into a "{lower}" socket in motherboard/board.json to run its LOGIC in aPEOSI.
@@ -205,7 +205,7 @@ DEVICE.param("clock_hz", 1000)
 
 
 class LOGIC(DeviceLogic):
-    """What the device does. Remove a hook you don't need."""
+    """What the device does. Unused hooks can be removed."""
 
     def reset(self):
         pass                                    # power-on
@@ -218,7 +218,7 @@ class LOGIC(DeviceLogic):
         return self.reg(name)                   # side effects go here (e.g. pop a FIFO)
 
     def tick(self):
-        pass                                    # one tick of clock_hz: advance your state machine
+        pass                                    # one tick of clock_hz: advance the state machine
 
     def on_serial(self, byte):
         pass                                    # a byte arrived on a serial line (SER devices, UARTs)

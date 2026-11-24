@@ -2,9 +2,9 @@
 aPE-Watchdog: a live view of aPEOSI's simulated RAM.
 
 This is a separate program. It maps the same .aperam file as aPEOSI
-(read-only) and redraws it 20 times per second, so you can watch the OS
+(read-only) and redraws it 20 times per second, showing the OS
 switch bits as it runs: context switches in the header, PCBs changing in the
-process table, page tables filling in, and your typing landing in a page.
+process table, page tables filling in, and typed text landing in a page.
 
 Usage:
     python ape_watchdog.py                   # RAM of motherboard/board.json

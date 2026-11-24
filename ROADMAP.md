@@ -84,7 +84,7 @@ Each stage builds what the next one needs.
 
 > **Feature freeze:** no new features until the presentable-release checklist is done
 > (tests ✅, CI ✅, README ✅, a Windows try-out, merge into `main`).
-> After that: **no new feature without its tests** ([TESTING.md](TESTING.md)).
+> After that, every new feature comes with its tests ([TESTING.md](TESTING.md)).
 
 Goal: 1980s-style games in aPE-BASIC, on the first real devices.
 Rule: **every device arrives together with the software that uses it.**
@@ -136,13 +136,11 @@ Rule: **every device arrives together with the software that uses it.**
 
 ## 💡 Stage 2: understand the system
 
-Goal: every part of aPEOSI is understood by its maintainer and explained in the docs
-before the system grows further.
+Goal: every part of aPEOSI is reviewed and explained in the docs before the system grows further.
 
-- [ ] Walk through [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md) with aPE-Watchdog open
-- [ ] Trace one context switch, one page fault and one system call end to end
+- [ ] Review [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md) against the current code
+- [ ] Document one context switch, one page fault and one system call end to end
 - [ ] Extend the docs to cover the Stage 1 devices
-- [ ] Fix at least one known issue without AI assistance
 
 ---
 
@@ -213,7 +211,7 @@ the BIOS's job, and the kernel loads programs straight into memory (like
 ### Modding levels for CPU modules
 - [ ] **Spec mods (JSON)**: clock, timer interval, cycle costs. Safe to share.
 - [ ] **Core mods (Python class)**: a whole new CPU with `reset()`, `step() → cycles`, `interrupt(n)`.
-  ⚠️ This is code that runs on your machine: only install core mods from people you trust.
+  ⚠️ A core mod is code that runs on the host machine: only trusted core mods should be installed.
 
 ### Beyond Stage 6 (optional)
 - [ ] OS/161 style: move parts of the kernel onto the virtual CPU, written in aPE-C, with a tiny boot ROM
@@ -268,11 +266,11 @@ and with something to observe in aPE-Watchdog.
 
 ---
 
-## Making your own module
+## Making a new module
 
 Name it by the [naming scheme](NAMING.md).
 
-| Module type | What you write | Where | Guide |
+| Module type | What to write | Where | Guide |
 |---|---|---|---|
 | RAM | a JSON spec, e.g. `ape-r32k.json` | `motherboard/ram/` | [modding guide](motherboard/README.md) |
 | CPU | a JSON spec, e.g. `ape-p2.json` | `motherboard/cpu/` | [modding guide](motherboard/README.md) |

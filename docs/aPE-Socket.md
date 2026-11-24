@@ -215,6 +215,6 @@ Real devices to read first:
 | [`bus/ape-u1-uart.py`](../motherboard/bus/ape-u1-uart.py) | system bus | read side effects, a FIFO, baud timing, driving a serial port |
 | [`serial/ape-e1-echo.py`](../motherboard/serial/ape-e1-echo.py) | serial port | a byte-stream device with no addresses |
 
-**Safety:** a `.py` device runs as code inside aPEOSI. Plug in only devices
-you trust, just as you would only run programs you trust. JSON specs and
+**Safety:** a `.py` device runs as code inside aPEOSI, so it deserves the same
+trust as any program: only trusted devices should be plugged in. JSON specs and
 compiled modules have no logic and are safe.

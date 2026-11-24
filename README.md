@@ -4,9 +4,9 @@
 
 [![tests](https://github.com/ahfuba/aPEOSI/actions/workflows/tests.yml/badge.svg)](https://github.com/ahfuba/aPEOSI/actions/workflows/tests.yml)
 
-**A simulated computer and operating system in Python, where you can watch every bit.**
+**A simulated computer and operating system in Python, with every bit on display.**
 Its RAM is a file that a second program shows live. Its hardware is made of
-swappable modules you can design yourself. It runs its own BASIC, and devices
+swappable modules that anyone can design. It runs its own BASIC, and devices
 with real logic (a timer, a serial port) plug into its motherboard's sockets.
 
 ![aPE-Watchdog showing aPEOSI's RAM live: physical frames coloured by process, the bits of one page, and the process table](docs/images/watchdog.png)
@@ -17,7 +17,7 @@ counter counts, and the process table, all read straight from the RAM file.*
 
 ## Try it
 
-You need Python 3.10 or newer; nothing else to install.
+Requires Python 3.10 or newer; nothing else to install.
 
 ```bash
 python main.py
@@ -63,11 +63,11 @@ HELLO FROM aPE-BASIC!
 
 | | |
 |---|---|
-| **An OS you can see** | processes, a round-robin scheduler, system calls, virtual memory with page tables and demand paging. The OS keeps all of it *inside the RAM file*, so aPE-Watchdog can show it. [How it works](docs/how-aPEOSI-1.2-works.md) |
+| **A visible OS** | processes, a round-robin scheduler, system calls, virtual memory with page tables and demand paging. The OS keeps all of it *inside the RAM file*, so aPE-Watchdog can show it. [How it works](docs/how-aPEOSI-1.2-works.md) |
 | **Modular hardware** | a `/motherboard` folder of swappable CPU and RAM modules, checked at boot by a small "BIOS". [Modding guide](motherboard/README.md) |
 | **Sockets and devices** | a system bus, PCI slots and serial ports. Devices with real logic plug in: a timer that raises interrupts, a UART that sends bytes at a real baud rate, an echo plug on COM1. Each device *is* a live file. [Socket spec](docs/aPE-Socket.md) |
 | **aPE-BASIC** | a 1980s-style BASIC with `PEEK`/`POKE`, `INP`/`OUT`, and keywords that see the hardware and the process table. [Reference](docs/aPE-BASIC.md) |
-| **aPE-DevKit** | design your own devices in Python or JSON: registers, bit fields, memory, logic. It checks the design and compiles it. [Guide](docs/aPE-DevKit.md) |
+| **aPE-DevKit** | device design in Python or JSON: registers, bit fields, memory, logic. It checks the design and compiles it. [Guide](docs/aPE-DevKit.md) |
 | **aPE-Watchdog** | a separate program that watches the RAM live. `ape_devkit.py info --watch` does the same for any device. |
 
 ## Documentation
@@ -77,7 +77,7 @@ HELLO FROM aPE-BASIC!
 | [How aPEOSI 1.2 works](docs/how-aPEOSI-1.2-works.md) | a guided tour of the OS, concept by concept |
 | [aPE-BASIC](docs/aPE-BASIC.md) | the language |
 | [aPE Socket](docs/aPE-Socket.md) | sockets, devices, interrupts, I/O ports: the hardware contract |
-| [aPE-DevKit](docs/aPE-DevKit.md) | building your own devices |
+| [aPE-DevKit](docs/aPE-DevKit.md) | building new devices |
 | [Hardware formats](docs/aPE-hardware.md) | the binary file formats |
 | [Modding guide](motherboard/README.md) | swapping and making hardware parts |
 | [Naming scheme](NAMING.md) | how everything in aPEOSI is named |

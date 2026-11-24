@@ -7,7 +7,7 @@ class BananaEditor:
     Inspired by classic terminal editors like ed and nano.
 
     The text buffer is NOT a Python list: it lives in this process's memory
-    in aPE-RAM, so you can watch your typing land in RAM with the Watchdog
+    in aPE-RAM, so the Watchdog shows typed text landing in RAM
     (or with 'peek <pid> 0').
 
     Virtual memory layout of this process:
@@ -84,7 +84,7 @@ class BananaEditor:
 
         print("\n--- Banana Editor ---")
         print("Type lines of text.  :p print buffer  :w save  :wq save and quit  :q quit")
-        print(f"Your text lives in RAM: try 'peek {self.pid} 0' or the aPE-Watchdog.")
+        print(f"The text lives in RAM: see 'peek {self.pid} 0' or the aPE-Watchdog.")
         print("---------------------\n")
 
         while True:

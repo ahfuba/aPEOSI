@@ -1,7 +1,7 @@
 # /motherboard: aPEOSI's hardware
 
 This folder is the computer that aPEOSI boots on. Every part is a small JSON
-file, so you can swap parts or make your own.
+file, so parts can be swapped or newly made.
 
 ```
 motherboard/
@@ -42,7 +42,7 @@ USB ports (`usb`, not built yet). They are listed in `board.json`:
 
 At boot every device gets its own live file next to the RAM: `bus0.apebus`,
 `bus1.apebus`, `com1.apeser`, and `board0.apemb` for the board itself. The
-socket rules and how to write your own device are in the
+socket rules and how to write a new device are in the
 [aPE Socket spec](../docs/aPE-Socket.md).
 
 ## Swapping parts
@@ -68,9 +68,9 @@ python main.py --board my_board.json
 python ape_watchdog.py --board my_board.json
 ```
 
-Give each board its own `ram_file` if you want to run two at once.
+To run two boards at once, give each its own `ram_file`.
 
-## Making your own parts
+## Making new parts
 
 ### CPU module
 
@@ -79,7 +79,7 @@ Give each board its own `ram_file` if you want to run two at once.
   "type": "cpu",
   "name": "My CPU",
   "clock_hz": 50,
-  "description": "anything you like"
+  "description": "free text"
 }
 ```
 
@@ -95,7 +95,7 @@ Give each board its own `ram_file` if you want to run two at once.
   "name": "My RAM",
   "page_size": 512,
   "num_pages": 128,
-  "description": "anything you like"
+  "description": "free text"
 }
 ```
 
@@ -114,7 +114,7 @@ Modules can also be **compiled** with [aPE-DevKit](../docs/aPE-DevKit.md)
 (`python ape_devkit.py build ram/my-ram.json` → `ape-r32k.aperam`), and
 `board.json` can point to the compiled file instead of the JSON.
 
-aPEOSI checks every file at boot ("BIOS") and tells you exactly what is wrong
+aPEOSI checks every file at boot ("BIOS") and reports exactly what is wrong
 if a part is invalid.
 
 The file formats are described in [`docs/aPE-hardware.md`](../docs/aPE-hardware.md).

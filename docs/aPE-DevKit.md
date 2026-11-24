@@ -1,8 +1,8 @@
 # aPE-DevKit
 
-aPE-DevKit lets you **design aPEOSI hardware**. You describe a device's
-parameters, memory regions and registers in Python (or JSON), and the kit
-checks the design and compiles it into a `.ape<class>` **module file**:
+aPE-DevKit is for **designing aPEOSI hardware**. A device's
+parameters, memory regions and registers are described in Python (or JSON),
+and the kit checks the design and compiles it into a `.ape<class>` **module file**:
 
 ```
 my_device.py ──► aPE-DevKit ──► ape-g9.apepci ──► aPEOSI and the tools read it
@@ -72,7 +72,7 @@ A source file must store its device in a variable called **`DEVICE`**.
 | `Field(name, lsb, width, description)` | a named group of bits in a register |
 | `.init(region, data, offset)` | initial contents, e.g. a font in ROM |
 
-**Regions** are placed one after another unless you give an `offset`. `align`
+**Regions** are placed one after another unless an `offset` is given. `align`
 (default 16) sets the boundary an automatically placed region starts on.
 Kinds: `data`, `registers`, `vram`, `buffer`, `rom`, `state`. Access is any
 combination of `r`, `w` and `x`.
@@ -188,8 +188,8 @@ can't be plugged in as RAM.
 ## Safety
 
 - **A `.py` device is a Python program.** Building it runs it, and plugging it
-  into a socket runs its `LOGIC` inside aPEOSI. Only use Python devices you
-  trust, just as you would only run programs you trust.
+  into a socket runs its `LOGIC` inside aPEOSI. Python devices deserve the
+  same trust as any program: only trusted ones should be used.
 - **JSON specs and compiled modules are plain data.** They have no logic, so
   they are safe to share and to load.
 

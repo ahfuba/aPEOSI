@@ -36,7 +36,7 @@ loads the OS.
 aPEOSI: `main.py` is the BIOS. It loads `motherboard/board.json`, validates
 each part, creates the RAM file, and runs `power_on_self_test()`, which
 writes `AA 55 AA 55 …` to each frame, reads it back and clears it. Boot without
-`--fast` and you can watch the sweep in the Watchdog.
+`--fast` to see the sweep in the Watchdog.
 
 ## 2. RAM: `sys/aperam.py`
 
@@ -78,7 +78,7 @@ aPEOSI: a process `yield`s a request object. The kernel receives it in
 `_schedule_round()` and acts on it:
 
 ```python
-line = yield ReadLine("> ")   # blocks until you type; the kernel send()s the line back
+line = yield ReadLine("> ")   # blocks until a line is typed; the kernel send()s it back
 yield Sleep(0.1)              # the kernel won't schedule this process for 0.1 s
 ```
 
@@ -99,7 +99,7 @@ Real OSes use a timer interrupt; Python generators can't be interrupted
 mid-step. Ctrl+C is the escape: it kills the foreground process.
 
 The keyboard is read by a separate thread (`Console`), so typing never
-blocks the scheduler. Background processes keep running while you type.
+blocks the scheduler. Background processes keep running while a line is typed.
 
 ## 7. Virtual memory: `MemoryManager.translate()`
 
@@ -123,7 +123,7 @@ and the Watchdog shows different physical frames.
 `counter/counter.py` is the simplest program: it stores a number in its
 memory, yields, repeats. `banana_editor/editor.py` keeps its whole text
 buffer in RAM (line count at `0x0`, byte count at `0x4`, text from `0x8`), so
-`peek <pid> 0` shows your typing.
+`peek <pid> 0` shows the typed text.
 
 An app gets two things from the process manager: `self.pid` and `self.mem`
 (its address space: `load`, `store`, `load_u32`, `store_u32`).

@@ -16,16 +16,16 @@ About 45 tests, in about 10 seconds:
 | `tests/test_sockets.py` | the motherboard: I/O windows, interrupts, the timer, the UART and echo plug, faulty devices, board files |
 | `tests/test_devkit.py` | aPE-DevKit and the device file formats |
 
-System tests boot aPEOSI on a temporary board, so they never touch your own
-files in `motherboard/`.
+System tests boot aPEOSI on a temporary board, so they never touch the files
+in `motherboard/`.
 
 **GitHub runs all of them on every push**, on Windows, Linux and macOS with
 Python 3.10, 3.12 and 3.13. The badge in the README shows the latest result;
 a red ❌ links to the log of what failed, and on which system.
 
-### The rule for new features
+### Tests for new features
 
-**No new feature without its tests**, in the same commit:
+Every new feature comes with its tests, in the same commit:
 
 - a new shell command or BASIC keyword → a case in `tests/test_system.py`
 - a new device → its behaviour in `tests/test_sockets.py`, and a BASIC example that uses it

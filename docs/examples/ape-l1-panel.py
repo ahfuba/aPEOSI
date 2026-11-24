@@ -1,7 +1,7 @@
 """
 aPE-L1 Panel: an example bus device for aPE-DevKit.
 
-A front panel with 8 LEDs and a push button, the kind of thing you'd wire to a
+A front panel with 8 LEDs and a push button, the kind of thing wired to a
 microcontroller. It shows every DevKit feature: parameters, regions,
 registers with bit fields, read-only registers and initial data.
 

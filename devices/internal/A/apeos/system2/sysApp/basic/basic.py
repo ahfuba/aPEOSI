@@ -18,7 +18,7 @@ aPEOSI integration:
   Even  10 GOTO 10  cannot freeze the OS.
 * INPUT uses the ReadLine system call, SLEEP uses Sleep.
 * Variables, arrays and the program text live in this process's memory, so
-  you can watch them in the aPE-Watchdog. PEEK and POKE read and write
+  the aPE-Watchdog shows them. PEEK and POKE read and write
   that memory directly, like on a Commodore 64.
 * aPE system keywords let a program look at the motherboard (CPU$, RAMSIZE),
   the process table (PSLOT, PSTATE, PNAME$), the MMU (FRAME, PHYS), and
@@ -30,7 +30,7 @@ Virtual memory map of a BASIC process:
     0x0100  variable table: 64 slots x 128 bytes
     0x2100  array heap
     0x4000  program text
-    0x8000  free: yours for PEEK and POKE
+    0x8000  free: for programs' own PEEK and POKE
 """
 
 import math

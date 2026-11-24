@@ -131,7 +131,7 @@ Talk to the devices in the motherboard's sockets, the way QBASIC programs used
 ```
 
 `timer.bas` programs the timer and watches its interrupts; `serial.bas` sends
-text out of the UART at a baud rate you choose and reads back what the echo plug
+text out of the UART at a chosen baud rate and reads back what the echo plug
 on COM1 returns.
 
 ### Memory (MMU)
@@ -156,7 +156,7 @@ These names are reserved: `PID = 5` gives `?PID IS RESERVED ERROR`.
 Errors look like the originals: `?SYNTAX ERROR IN 30`,
 `?TYPE MISMATCH ERROR`, `?UNDEF'D STATEMENT 999 ERROR`,
 `?BAD SUBSCRIPT ERROR`, `?OUT OF MEMORY ERROR`, and one that only aPEOSI
-has: `?PAGE FAULT ERROR`, when you `PEEK` memory your process was never
+has: `?PAGE FAULT ERROR`, when a program `PEEK`s memory its process was never
 given.
 
 ## BASIC and aPE-RAM
@@ -170,7 +170,7 @@ addresses:
 | `&H0100` | variable table: 64 slots × 128 bytes (name, type, value) |
 | `&H2100` | arrays |
 | `&H4000` | the program, as text |
-| `&H8000` | free for your own `POKE`s |
+| `&H8000` | free for the program's own `POKE`s |
 
 Open the aPE-Watchdog while a program runs: the statement counter
 ticks in the header page, and variables change in the variable table.
